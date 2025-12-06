@@ -45,9 +45,9 @@ const translations = {
     heroFeature2: 'Track your progress',
     heroFeature3: 'Learn at your pace',
     aboutTitle: 'Discover Ethiopia\'s Rich Linguistic Heritage',
-    aboutText: 'Ethiopia is home to over 80 languages, making it one of the most linguistically diverse countries in Africa. From Amharic, the official language with its unique Ge\'ez script, to Tigrinya, Afaan Oromo, and Somali — each language carries centuries of culture, poetry, and tradition.',
+    aboutText: 'Ethiopia is home to over 80 languages, making it one of the most linguistically diverse countries in Africa. From Amharic, the official language with its unique Ge\'ez script, to Tigrinya, Afaan Oromo, and Somali  each language carries centuries of culture, poetry, and tradition.',
     missionTitle: 'Our Mission',
-    missionText: 'We\'re bringing these beautiful languages to the world through modern, interactive learning. Whether you\'re connecting with heritage, preparing for travel, or simply curious — start your journey today.',
+    missionText: 'We\'re bringing these beautiful languages to the world through modern, interactive learning. Whether you\'re connecting with heritage, preparing for travel, or simply curious  start your journey today.',
   },
   am: {
     tagline: 'የኢትዮጵያ ቋንቋዎችን ይማሩ',
@@ -84,9 +84,9 @@ const translations = {
     heroFeature2: 'እድገትዎን ይከታተሉ',
     heroFeature3: 'በራስዎ ፍጥነት ይማሩ',
     aboutTitle: 'የኢትዮጵያን ሀብታም የቋንቋ ቅርስ ያግኙ',
-    aboutText: 'ኢትዮጵያ ከ80 በላይ ቋንቋዎች መኖሪያ ናት፣ ይህም በአፍሪካ ውስጥ በቋንቋ ልዩነት ከሚታወቁ አገሮች አንዷ ያደርጋታል። ከአማርኛ፣ ከትግርኛ፣ ከአፋን ኦሮሞ እስከ ሶማሊኛ — እያንዳንዱ ቋንቋ የዘመናት ባህል፣ ግጥም እና ወግ ይዟል።',
+    aboutText: 'ኢትዮጵያ ከ80 በላይ ቋንቋዎች መኖሪያ ናት፣ ይህም በአፍሪካ ውስጥ በቋንቋ ልዩነት ከሚታወቁ አገሮች አንዷ ያደርጋታል። ከአማርኛ፣ ከትግርኛ፣ ከአፋን ኦሮሞ እስከ ሶማሊኛ  እያንዳንዱ ቋንቋ የዘመናት ባህል፣ ግጥም እና ወግ ይዟል።',
     missionTitle: 'ተልዕኮአችን',
-    missionText: 'እነዚህን ቆንጆ ቋንቋዎች በዘመናዊ እና በይነተገናኝ ትምህርት ወደ ዓለም እናመጣለን። ከቅርስዎ ጋር ለመገናኘት፣ ለጉዞ ለመዘጋጀት ወይም በቀላሉ ለማወቅ — ዛሬ ጉዞዎን ይጀምሩ።',
+    missionText: 'እነዚህን ቆንጆ ቋንቋዎች በዘመናዊ እና በይነተገናኝ ትምህርት ወደ ዓለም እናመጣለን። ከቅርስዎ ጋር ለመገናኘት፣ ለጉዞ ለመዘጋጀት ወይም በቀላሉ ለማወቅ  ዛሬ ጉዞዎን ይጀምሩ።',
   },
   ti: {
     tagline: 'ናይ ኢትዮጵያ ቋንቋታት ተማሃሩ',
@@ -200,7 +200,7 @@ const useLanguageStore = create(
       },
     }),
     {
-      name: 'polyglot-language',
+      name: 'adewe-language',
     }
   )
 )

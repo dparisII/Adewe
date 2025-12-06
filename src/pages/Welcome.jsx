@@ -54,16 +54,11 @@ function Welcome() {
 
       {/* Header */}
       <header className="relative z-20 px-6 py-5 flex items-center justify-between max-w-6xl mx-auto">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <span className="text-white font-bold text-lg">ፖ</span>
-          </div>
-          <span className={`text-xl font-bold ${
-            theme === 'dark' ? 'text-white' : 'text-slate-800'
-          }`}>
-            Polyglot
-          </span>
-        </div>
+        <span className={`text-xl font-bold ${
+          theme === 'dark' ? 'text-white' : 'text-slate-800'
+        }`}>
+          Adewe
+        </span>
 
         <div className="flex items-center gap-2">
           {/* Language Dropdown */}
@@ -383,7 +378,7 @@ function Welcome() {
             onClick={() => navigate('/signup')}
             className="group inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02]"
           >
-            Get Started — It's Free
+            Get Started  It's Free
             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </button>
           <p className={`mt-4 text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>

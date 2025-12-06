@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Lock, Star, CheckCircle, Circle } from 'lucide-react'
+import { Lock, Star, CheckCircle } from 'lucide-react'
 import useStore from '../store/useStore'
 import { getLessons } from '../data/lessons'
 import { getLanguage } from '../data/languages'
@@ -143,11 +143,13 @@ function Home() {
           ))}
         </div>
 
-        {/* More Coming Soon */}
+        {/* Progress Summary */}
         <div className="mt-12 text-center">
           <div className="inline-flex items-center gap-2 bg-[#1a2c35] px-6 py-3 rounded-full">
-            <Circle size={20} className="text-gray-500" />
-            <span className="text-gray-400">More lessons coming soon...</span>
+            <CheckCircle size={20} className="text-[#58cc02]" />
+            <span className="text-gray-400">
+              {completedLessons.filter(l => l.startsWith(learningLanguage)).length} of {lessonData.units.reduce((acc, unit) => acc + unit.lessons.length, 0)} lessons completed
+            </span>
           </div>
         </div>
       </div>

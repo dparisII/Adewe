@@ -1,4 +1,15 @@
+import { useMemo } from 'react'
 import { Volume2 } from 'lucide-react'
+
+// Shuffle array utility
+const shuffleArray = (array) => {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+  return shuffled
+}
 
 function TranslationExercise({
   exercise,
@@ -7,26 +18,30 @@ function TranslationExercise({
   isChecked,
   isCorrect,
 }) {
+  // Shuffle options once when exercise loads
+  const shuffledOptions = useMemo(() => shuffleArray(exercise.options), [exercise])
+
   return (
     <div className="flex-1 flex flex-col">
       <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
         Translate this word
       </h2>
-      <p className="text-gray-400 mb-8">Select the correct translation</p>
+      <p className="text-gray-400 mb-6 md:mb-8">Select the correct translation</p>
 
       {/* Word to translate */}
-      <div className="bg-[#1a2c35] rounded-xl p-6 mb-8 flex items-center gap-4">
-        <button className="w-12 h-12 bg-[#58cc02] rounded-full flex items-center justify-center hover:bg-[#4caf00] transition-colors">
-          <Volume2 size={24} className="text-white" />
+      <div className="bg-[#1a2c35] rounded-xl p-4 md:p-6 mb-6 md:mb-8 flex items-center gap-3 md:gap-4">
+        <button className="w-10 h-10 md:w-12 md:h-12 bg-[#58cc02] rounded-full flex items-center justify-center hover:bg-[#4caf00] transition-colors flex-shrink-0">
+          <Volume2 size={20} className="text-white md:hidden" />
+          <Volume2 size={24} className="text-white hidden md:block" />
         </button>
-        <span className="text-2xl md:text-3xl font-bold text-white">
+        <span className="text-xl md:text-3xl font-bold text-white">
           {exercise.question}
         </span>
       </div>
 
       {/* Options */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {exercise.options.map((option, index) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
+        {shuffledOptions.map((option, index) => {
           const isSelected = selectedAnswer === option
           const isCorrectAnswer = option === exercise.answer
 

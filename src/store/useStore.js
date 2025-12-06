@@ -71,7 +71,7 @@ const useStore = create(
       }),
     }),
     {
-      name: 'polyglot-ethiopia-storage',
+      name: 'adewe-storage',
     }
   )
 )

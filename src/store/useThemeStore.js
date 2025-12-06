@@ -11,7 +11,7 @@ const useThemeStore = create(
       setTheme: (theme) => set({ theme }),
     }),
     {
-      name: 'polyglot-theme',
+      name: 'adewe-theme',
     }
   )
 )

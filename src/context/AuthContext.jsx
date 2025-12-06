@@ -87,6 +87,10 @@ export function AuthProvider({ children }) {
 
   const signUp = async (email, password, username, phone = '') => {
     if (!supabase) throw new Error('Supabase not configured')
+    
+    // Get the current site URL for email redirect
+    const siteUrl = window.location.origin
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -95,6 +99,7 @@ export function AuthProvider({ children }) {
           username,
           phone,
         },
+        emailRedirectTo: `${siteUrl}/login`,
       },
     })
 

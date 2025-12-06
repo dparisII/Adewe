@@ -196,7 +196,7 @@ function Lesson() {
 
       {/* Footer */}
       <footer
-        className={`border-t px-4 py-4 ${
+        className={`border-t px-4 py-4 safe-area-bottom ${
           isChecked
             ? isCorrect
               ? 'bg-green-900/30 border-green-700'
@@ -206,26 +206,28 @@ function Lesson() {
       >
         <div className="max-w-2xl mx-auto">
           {isChecked && (
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-3 md:mb-4">
               {isCorrect ? (
                 <>
-                  <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                    <Check size={24} className="text-white" />
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Check size={18} className="text-white md:hidden" />
+                    <Check size={24} className="text-white hidden md:block" />
                   </div>
                   <div>
-                    <p className="text-green-400 font-bold">Correct!</p>
-                    <p className="text-green-300 text-sm">+10 XP</p>
+                    <p className="text-green-400 font-bold text-sm md:text-base">Correct!</p>
+                    <p className="text-green-300 text-xs md:text-sm">+10 XP</p>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                    <X size={24} className="text-white" />
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <X size={18} className="text-white md:hidden" />
+                    <X size={24} className="text-white hidden md:block" />
                   </div>
-                  <div>
-                    <p className="text-red-400 font-bold">Incorrect</p>
-                    <p className="text-red-300 text-sm">
-                      Correct answer: {currentExercise.answer}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-red-400 font-bold text-sm md:text-base">Incorrect</p>
+                    <p className="text-red-300 text-xs md:text-sm truncate">
+                      Correct: {currentExercise.answer}
                     </p>
                   </div>
                 </>
@@ -236,13 +238,13 @@ function Lesson() {
           <button
             onClick={isChecked ? handleContinue : handleCheck}
             disabled={!selectedAnswer && !isChecked}
-            className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
+            className={`w-full py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition-all ${
               selectedAnswer || isChecked
                 ? isChecked
                   ? isCorrect
-                    ? 'bg-green-500 hover:bg-green-600 text-white'
-                    : 'bg-red-500 hover:bg-red-600 text-white'
-                  : 'bg-[#58cc02] hover:bg-[#4caf00] text-white'
+                    ? 'bg-green-500 hover:bg-green-600 active:bg-green-700 text-white'
+                    : 'bg-red-500 hover:bg-red-600 active:bg-red-700 text-white'
+                  : 'bg-[#58cc02] hover:bg-[#4caf00] active:bg-[#3d9902] text-white'
                 : 'bg-[#3c5a6a] text-gray-500 cursor-not-allowed'
             }`}
           >

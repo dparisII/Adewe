@@ -1,21 +1,35 @@
 # Supabase Email Confirmation Setup
 
-## To ENABLE Email Confirmation (Recommended for Production)
+## IMPORTANT: Configure Redirect URLs First!
 
 1. Go to your Supabase Dashboard: https://supabase.com/dashboard/project/zjxffkulsznxkjxvmxrk
 
-2. Navigate to **Authentication** → **Providers** → **Email**
+2. Navigate to **Authentication** → **URL Configuration**
 
-3. Make sure these settings are configured:
+3. Add your site URLs:
+   - **Site URL**: `https://adewe.netlify.app` (your production URL)
+   - **Redirect URLs**: Add these URLs:
+     - `https://adewe.netlify.app/login`
+     - `https://adewe.netlify.app/*`
+     - `http://localhost:5173/login` (for local development)
+     - `http://localhost:5173/*`
+
+4. Click **Save**
+
+## To ENABLE Email Confirmation (Recommended for Production)
+
+1. Navigate to **Authentication** → **Providers** → **Email**
+
+2. Make sure these settings are configured:
    - ✅ **Enable Email provider** = ON
    - ✅ **Confirm email** = ON (this requires users to verify their email)
    - ✅ **Secure email change** = ON
 
-4. Configure **Email Templates** (Authentication → Email Templates):
+3. Configure **Email Templates** (Authentication → Email Templates):
    - Customize the confirmation email template
    - Make sure the `{{ .ConfirmationURL }}` variable is in the template
 
-5. For **Custom SMTP** (recommended for production):
+4. For **Custom SMTP** (recommended for production):
    - Go to **Project Settings** → **Auth** → **SMTP Settings**
    - Add your SMTP provider (SendGrid, Mailgun, AWS SES, etc.)
    - This ensures emails are delivered reliably

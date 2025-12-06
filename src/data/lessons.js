@@ -233,6 +233,251 @@ export const lessonData = {
               },
             ],
           },
+          {
+            id: '3-2',
+            title: 'Extended Family',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Grandmother', right: 'አያት' },
+                  { left: 'Grandfather', right: 'አያት' },
+                  { left: 'Uncle', right: 'አጎት' },
+                  { left: 'Aunt', right: 'አክስት' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'Cousin',
+                answer: 'የአጎት/የአክስት ልጅ',
+                options: ['የአጎት/የአክስት ልጅ', 'ወንድም', 'እህት', 'ልጅ'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "nephew" in Amharic?',
+                answer: 'የወንድም/የእህት ልጅ',
+                options: ['የወንድም/የእህት ልጅ', 'አጎት', 'አክስት', 'አያት'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 4,
+        title: 'Food & Drinks',
+        description: 'Learn about Ethiopian cuisine',
+        lessons: [
+          {
+            id: '4-1',
+            title: 'Basic Foods',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Bread', right: 'ዳቦ' },
+                  { left: 'Water', right: 'ውሃ' },
+                  { left: 'Coffee', right: 'ቡና' },
+                  { left: 'Injera', right: 'እንጀራ' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'I am hungry',
+                answer: 'ርቤኛል',
+                options: ['ርቤኛል', 'ጠማኝ', 'ደክሞኛል', 'ተኝቻለሁ'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "ቡና" in English?',
+                answer: 'Coffee',
+                options: ['Coffee', 'Tea', 'Water', 'Milk'],
+              },
+              {
+                type: 'translation',
+                question: 'I am thirsty',
+                answer: 'ጠማኝ',
+                options: ['ጠማኝ', 'ርቤኛል', 'ደክሞኛል', 'ተኝቻለሁ'],
+                audio: null,
+              },
+              {
+                type: 'fillBlank',
+                sentence: 'Ethiopian traditional bread is called ___',
+                answer: 'እንጀራ',
+                options: ['እንጀራ', 'ዳቦ', 'ቂጣ', 'አምባሻ'],
+              },
+            ],
+          },
+          {
+            id: '4-2',
+            title: 'Ethiopian Dishes',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Doro Wot', right: 'ዶሮ ወጥ' },
+                  { left: 'Shiro', right: 'ሽሮ' },
+                  { left: 'Tibs', right: 'ጥብስ' },
+                  { left: 'Kitfo', right: 'ክትፎ' },
+                ],
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "ዶሮ ወጥ"?',
+                answer: 'Chicken stew',
+                options: ['Chicken stew', 'Beef stew', 'Vegetable stew', 'Fish stew'],
+              },
+              {
+                type: 'translation',
+                question: 'Delicious',
+                answer: 'ጣፋጭ',
+                options: ['ጣፋጭ', 'መራራ', 'ጨዋማ', 'ቅመም'],
+                audio: null,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 5,
+        title: 'Colors & Objects',
+        description: 'Learn colors and everyday objects',
+        lessons: [
+          {
+            id: '5-1',
+            title: 'Colors',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Red', right: 'ቀይ' },
+                  { left: 'Green', right: 'አረንጓዴ' },
+                  { left: 'Yellow', right: 'ቢጫ' },
+                  { left: 'Blue', right: 'ሰማያዊ' },
+                ],
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What color is "ጥቁር"?',
+                answer: 'Black',
+                options: ['Black', 'White', 'Gray', 'Brown'],
+              },
+              {
+                type: 'translation',
+                question: 'White',
+                answer: 'ነጭ',
+                options: ['ነጭ', 'ጥቁር', 'ግራጫ', 'ቡናማ'],
+                audio: null,
+              },
+              {
+                type: 'fillBlank',
+                sentence: 'The Ethiopian flag has green, yellow, and ___',
+                answer: 'ቀይ',
+                options: ['ቀይ', 'ሰማያዊ', 'ነጭ', 'ጥቁር'],
+              },
+            ],
+          },
+          {
+            id: '5-2',
+            title: 'Everyday Objects',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Book', right: 'መጽሐፍ' },
+                  { left: 'Pen', right: 'እስክሪብቶ' },
+                  { left: 'Phone', right: 'ስልክ' },
+                  { left: 'Table', right: 'ጠረጴዛ' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'Chair',
+                answer: 'ወንበር',
+                options: ['ወንበር', 'ጠረጴዛ', 'አልጋ', 'በር'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "በር" in English?',
+                answer: 'Door',
+                options: ['Door', 'Window', 'Wall', 'Floor'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 6,
+        title: 'Time & Days',
+        description: 'Learn to tell time and days of the week',
+        lessons: [
+          {
+            id: '6-1',
+            title: 'Days of the Week',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Monday', right: 'ሰኞ' },
+                  { left: 'Tuesday', right: 'ማክሰኞ' },
+                  { left: 'Wednesday', right: 'ረቡዕ' },
+                  { left: 'Thursday', right: 'ሐሙስ' },
+                ],
+              },
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Friday', right: 'አርብ' },
+                  { left: 'Saturday', right: 'ቅዳሜ' },
+                  { left: 'Sunday', right: 'እሁድ' },
+                  { left: 'Today', right: 'ዛሬ' },
+                ],
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What day is "ቅዳሜ"?',
+                answer: 'Saturday',
+                options: ['Saturday', 'Sunday', 'Friday', 'Monday'],
+              },
+              {
+                type: 'translation',
+                question: 'Tomorrow',
+                answer: 'ነገ',
+                options: ['ነገ', 'ዛሬ', 'ትናንት', 'ሳምንት'],
+                audio: null,
+              },
+            ],
+          },
+          {
+            id: '6-2',
+            title: 'Telling Time',
+            exercises: [
+              {
+                type: 'translation',
+                question: 'What time is it?',
+                answer: 'ስንት ሰዓት ነው?',
+                options: ['ስንት ሰዓት ነው?', 'ዛሬ ምን ቀን ነው?', 'የት ነህ?', 'ምን ትፈልጋለህ?'],
+                audio: null,
+              },
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Morning', right: 'ጠዋት' },
+                  { left: 'Afternoon', right: 'ከሰዓት' },
+                  { left: 'Evening', right: 'ማታ' },
+                  { left: 'Night', right: 'ሌሊት' },
+                ],
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What does "ጠዋት" mean?',
+                answer: 'Morning',
+                options: ['Morning', 'Afternoon', 'Evening', 'Night'],
+              },
+            ],
+          },
         ],
       },
     ],
@@ -367,6 +612,67 @@ export const lessonData = {
                 question: 'What does "ደሓን እየ" mean?',
                 answer: 'I am fine',
                 options: ['I am fine', 'Goodbye', 'Thank you', 'Hello'],
+              },
+            ],
+          },
+          {
+            id: '2-2',
+            title: 'Yes and No',
+            exercises: [
+              {
+                type: 'translation',
+                question: 'Yes',
+                answer: 'እወ',
+                options: ['እወ', 'ኣይፋል', 'ምናልባት', 'ርግጸኛ እየ'],
+                audio: null,
+              },
+              {
+                type: 'translation',
+                question: 'No',
+                answer: 'ኣይፋል',
+                options: ['ኣይፋል', 'እወ', 'ምናልባት', 'ኣይተረድኣንን'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'How do you say "I don\'t understand" in Tigrinya?',
+                answer: 'ኣይተረድኣንን',
+                options: ['ኣይተረድኣንን', 'ተረዲኡኒ', 'እወ', 'ኣይፋል'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 3,
+        title: 'Family',
+        description: 'Learn family member names',
+        lessons: [
+          {
+            id: '3-1',
+            title: 'Immediate Family',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Mother', right: 'ኣደ' },
+                  { left: 'Father', right: 'ኣቦ' },
+                  { left: 'Sister', right: 'ሓብቲ' },
+                  { left: 'Brother', right: 'ሓው' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'Family',
+                answer: 'ስድራ',
+                options: ['ስድራ', 'ገዛ', 'ሰብ', 'ቆልዓ'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "child" in Tigrinya?',
+                answer: 'ቆልዓ',
+                options: ['ቆልዓ', 'ሰብ', 'ስድራ', 'ሓው'],
               },
             ],
           },
@@ -513,6 +819,102 @@ export const lessonData = {
               },
             ],
           },
+          {
+            id: '2-2',
+            title: 'Yes and No',
+            exercises: [
+              {
+                type: 'translation',
+                question: 'Yes',
+                answer: 'Eeyyee',
+                options: ['Eeyyee', 'Lakki', 'Tarii', 'Nan hubadhe'],
+                audio: null,
+              },
+              {
+                type: 'translation',
+                question: 'No',
+                answer: 'Lakki',
+                options: ['Lakki', 'Eeyyee', 'Tarii', 'Hin hubanne'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'How do you say "I understand" in Oromo?',
+                answer: 'Nan hubadhe',
+                options: ['Nan hubadhe', 'Hin hubanne', 'Eeyyee', 'Lakki'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 3,
+        title: 'Family',
+        description: 'Learn family member names',
+        lessons: [
+          {
+            id: '3-1',
+            title: 'Immediate Family',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Mother', right: 'Haadha' },
+                  { left: 'Father', right: 'Abbaa' },
+                  { left: 'Sister', right: 'Obboleettii' },
+                  { left: 'Brother', right: 'Obboleessa' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'Family',
+                answer: 'Maatii',
+                options: ['Maatii', 'Mana', 'Nama', 'Ijoollee'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "child" in Oromo?',
+                answer: 'Ijoollee',
+                options: ['Ijoollee', 'Nama', 'Maatii', 'Obboleessa'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 4,
+        title: 'Food & Drinks',
+        description: 'Learn about food and beverages',
+        lessons: [
+          {
+            id: '4-1',
+            title: 'Basic Foods',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Bread', right: 'Buddeena' },
+                  { left: 'Water', right: 'Bishaan' },
+                  { left: 'Coffee', right: 'Buna' },
+                  { left: 'Milk', right: 'Aannan' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'I am hungry',
+                answer: 'Beela\'e',
+                options: ['Beela\'e', 'Dheebote', 'Dadhabee', 'Rafee'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "Buna" in English?',
+                answer: 'Coffee',
+                options: ['Coffee', 'Tea', 'Water', 'Milk'],
+              },
+            ],
+          },
         ],
       },
     ],
@@ -653,6 +1055,109 @@ export const lessonData = {
                 question: 'What does "Waan fiicnahay" mean?',
                 answer: 'I am fine',
                 options: ['I am fine', 'Goodbye', 'Thank you', 'Hello'],
+              },
+            ],
+          },
+          {
+            id: '2-2',
+            title: 'Yes and No',
+            exercises: [
+              {
+                type: 'translation',
+                question: 'Yes',
+                answer: 'Haa',
+                options: ['Haa', 'Maya', 'Laga yaabaa', 'Waan fahamsanahay'],
+                audio: null,
+              },
+              {
+                type: 'translation',
+                question: 'No',
+                answer: 'Maya',
+                options: ['Maya', 'Haa', 'Laga yaabaa', 'Ma fahmin'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'How do you say "I understand" in Somali?',
+                answer: 'Waan fahamsanahay',
+                options: ['Waan fahamsanahay', 'Ma fahmin', 'Haa', 'Maya'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 3,
+        title: 'Family',
+        description: 'Learn family member names',
+        lessons: [
+          {
+            id: '3-1',
+            title: 'Immediate Family',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Mother', right: 'Hooyo' },
+                  { left: 'Father', right: 'Aabo' },
+                  { left: 'Sister', right: 'Walaal (gabadh)' },
+                  { left: 'Brother', right: 'Walaal (wiil)' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'Family',
+                answer: 'Qoys',
+                options: ['Qoys', 'Guri', 'Qof', 'Ilmo'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "child" in Somali?',
+                answer: 'Ilmo',
+                options: ['Ilmo', 'Qof', 'Qoys', 'Walaal'],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: 4,
+        title: 'Food & Drinks',
+        description: 'Learn about food and beverages',
+        lessons: [
+          {
+            id: '4-1',
+            title: 'Basic Foods',
+            exercises: [
+              {
+                type: 'matching',
+                pairs: [
+                  { left: 'Bread', right: 'Rooti' },
+                  { left: 'Water', right: 'Biyo' },
+                  { left: 'Tea', right: 'Shaah' },
+                  { left: 'Milk', right: 'Caano' },
+                ],
+              },
+              {
+                type: 'translation',
+                question: 'I am hungry',
+                answer: 'Waan gaajoonayaa',
+                options: ['Waan gaajoonayaa', 'Waan harraadsan ahay', 'Waan daallan ahay', 'Waan seexanayaa'],
+                audio: null,
+              },
+              {
+                type: 'multipleChoice',
+                question: 'What is "Shaah" in English?',
+                answer: 'Tea',
+                options: ['Tea', 'Coffee', 'Water', 'Milk'],
+              },
+              {
+                type: 'translation',
+                question: 'Rice',
+                answer: 'Bariis',
+                options: ['Bariis', 'Rooti', 'Hilib', 'Khudaar'],
+                audio: null,
               },
             ],
           },
