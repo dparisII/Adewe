@@ -6,6 +6,7 @@ function MatchingExercise({ exercise, setSelectedAnswer, isChecked }) {
   const [rightSelected, setRightSelected] = useState(null)
   const [matchedPairs, setMatchedPairs] = useState([])
   const [wrongPair, setWrongPair] = useState(null)
+  const [mistakes, setMistakes] = useState(0)
 
   // Shuffle right side options
   const [shuffledRight] = useState(() =>
@@ -14,9 +15,10 @@ function MatchingExercise({ exercise, setSelectedAnswer, isChecked }) {
 
   useEffect(() => {
     if (matchedPairs.length === exercise.pairs.length) {
-      setSelectedAnswer(true)
+      // Pass mistake count along with completion status
+      setSelectedAnswer({ completed: true, mistakes })
     }
-  }, [matchedPairs, exercise.pairs.length, setSelectedAnswer])
+  }, [matchedPairs, exercise.pairs.length, setSelectedAnswer, mistakes])
 
   const handleLeftClick = (item) => {
     if (isChecked || matchedPairs.some((p) => p.left === item)) return
@@ -48,6 +50,7 @@ function MatchingExercise({ exercise, setSelectedAnswer, isChecked }) {
       setLeftSelected(null)
       setRightSelected(null)
     } else {
+      setMistakes(prev => prev + 1)
       setWrongPair({ left, right })
       setTimeout(() => {
         setLeftSelected(null)
@@ -62,10 +65,10 @@ function MatchingExercise({ exercise, setSelectedAnswer, isChecked }) {
 
   return (
     <div className="flex-1 flex flex-col">
-      <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+      <h2 className="text-xl md:text-2xl font-bold text-text-main dark:text-white mb-2">
         Match the pairs
       </h2>
-      <p className="text-gray-400 mb-6 md:mb-8">Tap the matching pairs</p>
+      <p className="text-text-alt mb-6 md:mb-8">Tap the matching pairs</p>
 
       <div className="flex gap-2 md:gap-8 justify-center px-2">
         {/* Left Column */}
@@ -80,27 +83,25 @@ function MatchingExercise({ exercise, setSelectedAnswer, isChecked }) {
                 key={index}
                 onClick={() => handleLeftClick(pair.left)}
                 disabled={isMatched || isChecked}
-                className={`relative px-3 md:px-4 py-2.5 md:py-3 rounded-xl border-2 w-full transition-all text-sm md:text-base ${
-                  isMatched
+                className={`relative px-3 md:px-4 py-2.5 md:py-3 rounded-xl border-2 w-full transition-all text-sm md:text-base min-h-[60px] flex items-center justify-center ${isMatched
                     ? 'border-green-500 bg-green-500/20 opacity-50'
                     : isWrong
-                    ? 'border-red-500 bg-red-500/20 animate-shake'
-                    : isSelected
-                    ? 'border-[#58cc02] bg-[#58cc02]/10'
-                    : 'border-[#3c5a6a] bg-[#1a2c35] hover:border-[#58cc02]'
-                }`}
+                      ? 'border-red-500 bg-red-500/20 animate-shake'
+                      : isSelected
+                        ? 'border-brand-primary bg-brand-primary/10'
+                        : 'border-border-main bg-bg-card hover:border-brand-primary/50'
+                  }`}
               >
                 <span
-                  className={`font-semibold truncate block ${
-                    isMatched ? 'text-green-400' : 'text-white'
-                  }`}
+                  className={`font-semibold break-words whitespace-normal text-center ${isMatched ? 'text-green-600 dark:text-green-400' : isSelected ? 'text-brand-primary' : 'text-text-main dark:text-white'
+                    }`}
                 >
                   {pair.left}
                 </span>
                 {isMatched && (
                   <Check
                     size={14}
-                    className="absolute top-1 right-1 text-green-400"
+                    className="absolute top-1 right-1 text-green-600 dark:text-green-400"
                   />
                 )}
               </button>
@@ -120,27 +121,25 @@ function MatchingExercise({ exercise, setSelectedAnswer, isChecked }) {
                 key={index}
                 onClick={() => handleRightClick(pair.right)}
                 disabled={isMatched || isChecked}
-                className={`relative px-3 md:px-4 py-2.5 md:py-3 rounded-xl border-2 w-full transition-all text-sm md:text-base ${
-                  isMatched
+                className={`relative px-3 md:px-4 py-2.5 md:py-3 rounded-xl border-2 w-full transition-all text-sm md:text-base min-h-[60px] flex items-center justify-center ${isMatched
                     ? 'border-green-500 bg-green-500/20 opacity-50'
                     : isWrong
-                    ? 'border-red-500 bg-red-500/20 animate-shake'
-                    : isSelected
-                    ? 'border-[#58cc02] bg-[#58cc02]/10'
-                    : 'border-[#3c5a6a] bg-[#1a2c35] hover:border-[#58cc02]'
-                }`}
+                      ? 'border-red-500 bg-red-500/20 animate-shake'
+                      : isSelected
+                        ? 'border-brand-primary bg-brand-primary/10'
+                        : 'border-border-main bg-bg-card hover:border-brand-primary/50'
+                  }`}
               >
                 <span
-                  className={`font-semibold truncate block ${
-                    isMatched ? 'text-green-400' : 'text-white'
-                  }`}
+                  className={`font-semibold break-words whitespace-normal text-center ${isMatched ? 'text-green-600 dark:text-green-400' : isSelected ? 'text-brand-primary' : 'text-text-main dark:text-white'
+                    }`}
                 >
                   {pair.right}
                 </span>
                 {isMatched && (
                   <Check
                     size={14}
-                    className="absolute top-1 right-1 text-green-400"
+                    className="absolute top-1 right-1 text-green-600 dark:text-green-400"
                   />
                 )}
               </button>
@@ -151,7 +150,7 @@ function MatchingExercise({ exercise, setSelectedAnswer, isChecked }) {
 
       {/* Progress indicator */}
       <div className="mt-6 md:mt-8 text-center">
-        <span className="text-gray-400 text-sm md:text-base">
+        <span className="text-text-alt text-sm md:text-base">
           {matchedPairs.length} / {exercise.pairs.length} pairs matched
         </span>
       </div>

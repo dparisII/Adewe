@@ -13,7 +13,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     // If no valid credentials, skip auth
     if (!hasValidCredentials || !supabase) {
-      console.log('No valid Supabase credentials')
+      const savedProfile = localStorage.getItem('demo_profile')
+      if (savedProfile) {
+        const demoProfile = JSON.parse(savedProfile)
+        setUser({ id: demoProfile.id, email: demoProfile.email })
+        setProfile(demoProfile)
+      }
       setLoading(false)
       return
     }
@@ -21,11 +26,9 @@ export function AuthProvider({ children }) {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.error('Session error:', error)
         setLoading(false)
         return
       }
-      console.log('Session check:', session ? 'User logged in' : 'No session')
       setUser(session?.user ?? null)
       if (session?.user) {
         fetchProfile(session.user.id)
@@ -33,14 +36,12 @@ export function AuthProvider({ children }) {
         setLoading(false)
       }
     }).catch(err => {
-      console.error('Session check failed:', err)
       setLoading(false)
     })
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email)
         setUser(session?.user ?? null)
         if (session?.user) {
           fetchProfile(session.user.id)
@@ -85,12 +86,12 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const signUp = async (email, password, username, phone = '') => {
+  const signUp = async (email, password, username, phone = '', nativeLanguage = '', learningLanguage = '') => {
     if (!supabase) throw new Error('Supabase not configured')
-    
+
     // Get the current site URL for email redirect
     const siteUrl = window.location.origin
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -98,6 +99,8 @@ export function AuthProvider({ children }) {
         data: {
           username,
           phone,
+          native_language: nativeLanguage,
+          learning_language: learningLanguage
         },
         emailRedirectTo: `${siteUrl}/login`,
       },
@@ -112,7 +115,40 @@ export function AuthProvider({ children }) {
   }
 
   const signIn = async (email, password) => {
-    if (!supabase) throw new Error('Supabase not configured')
+    if (!hasValidCredentials || !supabase) {
+      // Demo mode - simulate login
+      console.log('Demo mode: Simulating login')
+      const savedProfile = localStorage.getItem('demo_profile')
+      if (savedProfile) {
+        const demoProfile = JSON.parse(savedProfile)
+        setUser({ id: demoProfile.id, email: demoProfile.email })
+        setProfile(demoProfile)
+      } else {
+        const demoUser = {
+          id: 'demo-user-123',
+          email,
+          user_metadata: { username: 'Demo User' }
+        }
+        setUser(demoUser)
+        const demoProfile = {
+          id: demoUser.id,
+          username: 'Demo User',
+          email,
+          native_language: 'english',
+          learning_language: 'amharic',
+          xp: 0,
+          streak: 0,
+          hearts: 5,
+          gems: 0,
+          is_admin: true,
+          completed_lessons: [],
+          progress: {}
+        }
+        setProfile(demoProfile)
+        localStorage.setItem('demo_profile', JSON.stringify(demoProfile))
+      }
+      return { user: { email }, data: { user: { email } }, error: null }
+    }
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -123,14 +159,31 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = async () => {
-    if (!supabase) return
+    if (!hasValidCredentials || !supabase) {
+      // Demo mode - simulate logout
+      console.log('Demo mode: Simulating logout')
+      setUser(null)
+      setProfile(null)
+      localStorage.removeItem('demo_profile')
+      return
+    }
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+    setUser(null)
     setProfile(null)
   }
 
   const updateProfile = async (updates) => {
-    if (!user || !supabase) return
+    if (!user) return
+
+    if (!hasValidCredentials || !supabase) {
+      // Demo mode - update localStorage
+      console.log('Demo mode: Updating profile')
+      const updatedProfile = { ...profile, ...updates }
+      setProfile(updatedProfile)
+      localStorage.setItem('demo_profile', JSON.stringify(updatedProfile))
+      return updatedProfile
+    }
 
     const { data, error } = await supabase
       .from('profiles')

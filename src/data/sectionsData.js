@@ -1,0 +1,1104 @@
+// Generate 10 sections with 15 units each for all language pairs
+// Each unit has 5 lessons
+
+const realContent = {
+  'amharic': {
+    'Greetings': [
+      { native: 'Hello', learning: 'Selam (ሰላም)' },
+      { native: 'Good morning', learning: 'Endemin aderk (እንደምን አደርክ)' },
+      { native: 'Good evening', learning: 'Endemin amesheh (እንደምን አመሸህ)' },
+      { native: 'How are you?', learning: 'Endet neh? (እንዴት ነህ?)' },
+      { native: 'Goodbye', learning: 'Dehna hun (ደህና ሁን)' }
+    ],
+    'Introductions': [
+      { native: 'My name is...', learning: 'Sime... naw (ስሜ... ነው)' },
+      { native: 'Nice to meet you', learning: 'Siletewaweqin des bilognal (ስለተዋወቅን ደስ ብሎኛል)' },
+      { native: 'Where are you from?', learning: 'Ke yet neh? (ከየት ነህ?)' },
+      { native: 'I am from...', learning: 'Ine ke... negn (እኔ ከ... ነኝ)' },
+      { native: 'Who are you?', learning: 'Man neh? (ማን ነህ?)' }
+    ],
+    'Numbers 1-10': [
+      { native: 'One', learning: 'And (አንድ)' },
+      { native: 'Two', learning: 'Hulet (ሁለት)' },
+      { native: 'Three', learning: 'Sost (ሶስት)' },
+      { native: 'Four', learning: 'Arat (አራት)' },
+      { native: 'Five', learning: 'Amist (አምስት)' },
+      { native: 'Six', learning: 'Sidist (ስድስት)' },
+      { native: 'Seven', learning: 'Sebat (ሰባት)' },
+      { native: 'Eight', learning: 'Simint (ስምንት)' },
+      { native: 'Nine', learning: 'Zetegn (ዘጠኝ)' },
+      { native: 'Ten', learning: 'Asir (አስር)' }
+    ],
+    'Colors': [
+      { native: 'Red', learning: 'Key (ቀይ)' },
+      { native: 'Blue', learning: 'Semayawi (ሰማያዊ)' },
+      { native: 'Green', learning: 'Arengwade (አረንጓዴ)' },
+      { native: 'Yellow', learning: 'Bicha (ቢጫ)' },
+      { native: 'Black', learning: 'Tikur (ጥቁር)' },
+      { native: 'White', learning: 'Nech (ነጭ)' }
+    ],
+    'Family': [
+      { native: 'Mother', learning: 'Enat (እናት)' },
+      { native: 'Father', learning: 'Abat (አባት)' },
+      { native: 'Brother', learning: 'Wondim (ወንድም)' },
+      { native: 'Sister', learning: 'Ehit (እህት)' },
+      { native: 'Grandmother', learning: 'Ayat (አያት)' }
+    ],
+    'Days of Week': [
+      { native: 'Monday', learning: 'Segno (ሰኞ)' },
+      { native: 'Tuesday', learning: 'Maksegno (ማክሰኞ)' },
+      { native: 'Wednesday', learning: 'Erob (ረቡዕ)' },
+      { native: 'Thursday', learning: 'Hamus (ሐሙስ)' },
+      { native: 'Friday', learning: 'Arb (አርብ)' },
+      { native: 'Saturday', learning: 'Kidame (ቅዳሜ)' },
+      { native: 'Sunday', learning: 'Ehud (እሁድ)' }
+    ],
+    'Months': [
+      { native: 'September', learning: 'Meskerem (መስከረም)' },
+      { native: 'October', learning: 'Tikimt (ጥቅምት)' },
+      { native: 'November', learning: 'Hidar (ህዳር)' },
+      { native: 'December', learning: 'Tahisas (ታህሳስ)' },
+      { native: 'January', learning: 'Tir (ጥር)' }
+    ],
+    'Basic Verbs': [
+      { native: 'To eat', learning: 'Meblat (መብላት)' },
+      { native: 'To drink', learning: 'Metetat (መጠጣት)' },
+      { native: 'To sleep', learning: 'Metegnat (መተኛት)' },
+      { native: 'To go', learning: 'Mehed (መሄድ)' },
+      { native: 'To come', learning: 'Memtat (መምጣት)' }
+    ],
+    'Common Objects': [
+      { native: 'Table', learning: 'Terepeza (ጠረጴዛ)' },
+      { native: 'Chair', learning: 'Wember (ወንበር)' },
+      { native: 'Door', learning: 'Ber (በር)' },
+      { native: 'Window', learning: 'Meskot (መስኮት)' },
+      { native: 'Pen', learning: 'Iskiribto (እስክሪብቶ)' }
+    ],
+    'Food Basics': [
+      { native: 'Bread', learning: 'Dabo (ዳቦ)' },
+      { native: 'Water', learning: 'Wuha (ውሃ)' },
+      { native: 'Milk', learning: 'Wetet (ወተት)' },
+      { native: 'Coffee', learning: 'Buna (ቡና)' },
+      { native: 'Tea', learning: 'Shay (ሻይ)' }
+    ],
+    'Animals': [
+      { native: 'Dog', learning: 'Wisha (ውሻ)' },
+      { native: 'Cat', learning: 'Dimet (ድመት)' },
+      { native: 'Cow', learning: 'Lam (ላም)' },
+      { native: 'Sheep', learning: 'Beg (በግ)' },
+      { native: 'Lion', learning: 'Anbessa (አንበሳ)' }
+    ],
+    'Body Parts': [
+      { native: 'Head', learning: 'Ras (ራስ)' },
+      { native: 'Eye', learning: 'Ayn (ዓይን)' },
+      { native: 'Nose', learning: 'Afincha (አፍንጫ)' },
+      { native: 'Mouth', learning: 'Af (አፍ)' },
+      { native: 'Hand', learning: 'Ej (እጅ)' }
+    ],
+    'Clothing': [
+      { native: 'Shirt', learning: 'Shemiz (ሸሚዝ)' },
+      { native: 'Pants', learning: 'Surri (ሱሪ)' },
+      { native: 'Shoes', learning: 'Chamma (ጫማ)' },
+      { native: 'Hat', learning: 'Kofiya (ቆብ)' },
+      { native: 'Dress', learning: 'Kemis (ቀሚስ)' }
+    ],
+    'Weather': [
+      { native: 'Sun', learning: 'Tsehay (ፀሐይ)' },
+      { native: 'Rain', learning: 'Zinab (ዝናብ)' },
+      { native: 'Wind', learning: 'Nifas (ንፋስ)' },
+      { native: 'Cloud', learning: 'Demena (ደመና)' },
+      { native: 'Hot', learning: 'Muk (ሙቀት)' }
+    ],
+    'Time': [
+      { native: 'Morning', learning: 'Tewat (ጠዋት)' },
+      { native: 'Afternoon', learning: 'Keseat (ከሰዓት)' },
+      { native: 'Night', learning: 'Lelit (ሌሊት)' },
+      { native: 'Today', learning: 'Zare (ዛሬ)' },
+      { native: 'Tomorrow', learning: 'Nege (ነገ)' }
+    ],
+    // Section 2 - Explore
+    'Numbers 11-100': [
+      { native: 'Eleven', learning: 'Asra and (አስራ አንድ)' },
+      { native: 'Twenty', learning: 'Haya (ሃያ)' },
+      { native: 'Thirty', learning: 'Selasa (ሰላሳ)' },
+      { native: 'Fifty', learning: 'Hamsa (ሃምሳ)' },
+      { native: 'Hundred', learning: 'Meto (መቶ)' }
+    ],
+    'Directions': [
+      { native: 'Left', learning: 'Gra (ግራ)' },
+      { native: 'Right', learning: 'Qegn (ቀኝ)' },
+      { native: 'Straight', learning: 'Qetita (ቀጥታ)' },
+      { native: 'North', learning: 'Semen (ሰሜን)' },
+      { native: 'South', learning: 'Debub (ደቡብ)' }
+    ],
+    'Places in City': [
+      { native: 'Market', learning: 'Gebeya (ገበያ)' },
+      { native: 'Hospital', learning: 'Hospital (ሆስፒታል)' },
+      { native: 'School', learning: 'Timhirt bet (ትምህርት ቤት)' },
+      { native: 'Bank', learning: 'Bank (ባንክ)' },
+      { native: 'Church', learning: 'Betekrstiyan (ቤተክርስቲያን)' }
+    ],
+    'Transportation': [
+      { native: 'Car', learning: 'Mekina (መኪና)' },
+      { native: 'Bus', learning: 'Autobus (አውቶቡስ)' },
+      { native: 'Airplane', learning: 'Ayroplan (አይሮፕላን)' },
+      { native: 'Bicycle', learning: 'Biskilet (ብስክሌት)' },
+      { native: 'Train', learning: 'Babur (ባቡር)' }
+    ],
+    'Shopping': [
+      { native: 'How much?', learning: 'Sint new? (ስንት ነው?)' },
+      { native: 'Expensive', learning: 'Wud (ውድ)' },
+      { native: 'Cheap', learning: 'Rkash (ርካሽ)' },
+      { native: 'To buy', learning: 'Megzat (መግዛት)' },
+      { native: 'To sell', learning: 'Meshet (መሸጥ)' }
+    ],
+    'At Restaurant': [
+      { native: 'Menu', learning: 'Menu (ሜኑ)' },
+      { native: 'Waiter', learning: 'Astelatai (አስተላላፊ)' },
+      { native: 'Bill', learning: 'Hisab (ሂሳብ)' },
+      { native: 'Delicious', learning: 'Tafach (ጣፋጭ)' },
+      { native: 'Hungry', learning: 'Rabeñ (ራበኝ)' }
+    ],
+    'At Home': [
+      { native: 'Kitchen', learning: 'Madbet (ማድቤት)' },
+      { native: 'Bedroom', learning: 'Megnta kilil (መኝታ ክፍል)' },
+      { native: 'Bathroom', learning: 'Metatebiya (መታጠቢያ)' },
+      { native: 'Living room', learning: 'Salon (ሳሎን)' },
+      { native: 'Garden', learning: 'Yatiraf (የአትክልት ቦታ)' }
+    ],
+    'Hobbies': [
+      { native: 'Reading', learning: 'Manbeb (ማንበብ)' },
+      { native: 'Writing', learning: 'Metsaf (መጻፍ)' },
+      { native: 'Drawing', learning: 'Mesrat (መሳል)' },
+      { native: 'Cooking', learning: 'Mabeslat (ማብሰል)' },
+      { native: 'Dancing', learning: 'Menekawes (መነቃወስ)' }
+    ],
+    'Sports': [
+      { native: 'Football', learning: 'Igir kwas (እግር ኳስ)' },
+      { native: 'Running', learning: 'Meruz (ሩጫ)' },
+      { native: 'Swimming', learning: 'Wana (ዋና)' },
+      { native: 'Basketball', learning: 'Basket kwas (ባስኬት ኳስ)' },
+      { native: 'Tennis', learning: 'Tennis (ቴኒስ)' }
+    ],
+    'Music': [
+      { native: 'Song', learning: 'Zema (ዜማ)' },
+      { native: 'Singer', learning: 'Zenagn (ዘማሪ)' },
+      { native: 'Instrument', learning: 'Yamusika mesar (የሙዚቃ መሳሪያ)' },
+      { native: 'To sing', learning: 'Mezemer (መዘመር)' },
+      { native: 'To listen', learning: 'Masmat (ማስማት)' }
+    ],
+    'School': [
+      { native: 'Teacher', learning: 'Memhir (መምህር)' },
+      { native: 'Student', learning: 'Temari (ተማሪ)' },
+      { native: 'Book', learning: 'Metshaf (መጽሐፍ)' },
+      { native: 'Class', learning: 'Kilil (ክፍል)' },
+      { native: 'Exam', learning: 'Fetena (ፈተና)' }
+    ],
+    'Work': [
+      { native: 'Office', learning: 'Biro (ቢሮ)' },
+      { native: 'Boss', learning: 'Aleqa (አለቃ)' },
+      { native: 'Colleague', learning: 'Yaser baleber (የሥራ ባልደረባ)' },
+      { native: 'Salary', learning: 'Demoz (ደሞዝ)' },
+      { native: 'Meeting', learning: 'Sbseb (ስብሰባ)' }
+    ],
+    'Health': [
+      { native: 'Doctor', learning: 'Hakim (ሀኪም)' },
+      { native: 'Medicine', learning: 'Medhanit (መድሃኒት)' },
+      { native: 'Sick', learning: 'Himam (ህመም)' },
+      { native: 'Healthy', learning: 'Tena (ጤና)' },
+      { native: 'Pain', learning: 'Himam (ህመም)' }
+    ],
+    'Emotions': [
+      { native: 'Happy', learning: 'Desta (ደስታ)' },
+      { native: 'Sad', learning: 'Hazin (ሐዘን)' },
+      { native: 'Angry', learning: 'Neded (ንዴት)' },
+      { native: 'Afraid', learning: 'Firit (ፍርሃት)' },
+      { native: 'Surprised', learning: 'Denget (ደንገጥ)' }
+    ],
+    'Adjectives': [
+      { native: 'Big', learning: 'Tiliq (ትልቅ)' },
+      { native: 'Small', learning: 'Tinish (ትንሽ)' },
+      { native: 'Beautiful', learning: 'Qonjo (ቆንጆ)' },
+      { native: 'Ugly', learning: 'Makureku (መጥፎ)' },
+      { native: 'Fast', learning: 'Fetani (ፈጣን)' }
+    ]
+  },
+  'tigrinya': {
+    'Greetings': [
+      { native: 'Hello', learning: 'Selam (ሰላም)' },
+      { native: 'Good morning', learning: 'Kemey haderka (ከመይ ሓዲርካ)' },
+      { native: 'Good evening', learning: 'Kemey amsika (ከመይ ኣምሲኻ)' },
+      { native: 'How are you?', learning: 'Kemey leka? (ከመይ ለኻ?)' },
+      { native: 'Goodbye', learning: 'Dehan kun (ደሓን ኩን)' }
+    ],
+    'Introductions': [
+      { native: 'My name is...', learning: 'Simey... eyu (ስመይ... እዩ)' },
+      { native: 'Nice to meet you', learning: 'Siletewaweqna des biluni (ስለተዋወቅና ደስ ኢሉኒ)' },
+      { native: 'Where are you from?', learning: 'Kabey metsika? (ካበይ መጺኻ?)' },
+      { native: 'I am from...', learning: 'Ane kab... iye (ኣነ ካብ... እየ)' },
+      { native: 'Who are you?', learning: 'Men ixa? (መን ኢኻ?)' }
+    ],
+    'Numbers 1-10': [
+      { native: 'One', learning: 'Hade (ሓደ)' },
+      { native: 'Two', learning: 'Kelete (ክልተ)' },
+      { native: 'Three', learning: 'Seleste (ሰለስተ)' },
+      { native: 'Four', learning: 'Arbate (ኣርባዕተ)' },
+      { native: 'Five', learning: 'Hamushte (ሓሙሽተ)' },
+      { native: 'Six', learning: 'Shudushte (ሹዱሽተ)' },
+      { native: 'Seven', learning: 'Showate (ሾውዓተ)' },
+      { native: 'Eight', learning: 'Shemonte (ሸሞንተ)' },
+      { native: 'Nine', learning: 'Tisheate (ትሽዓተ)' },
+      { native: 'Ten', learning: 'Aserte (ዓሰርተ)' }
+    ],
+    'Colors': [
+      { native: 'Red', learning: 'Keyih (ቀይሕ)' },
+      { native: 'Blue', learning: 'Semayawi (ሰማያዊ)' },
+      { native: 'Green', learning: 'Khetelya (ቀጠልያ)' },
+      { native: 'Yellow', learning: 'Bicha (ቢጫ)' },
+      { native: 'Black', learning: 'Tselim (ጸሊም)' },
+      { native: 'White', learning: 'Tsaeda (ጻዕዳ)' }
+    ],
+    'Family': [
+      { native: 'Mother', learning: 'Ade (ኣደ)' },
+      { native: 'Father', learning: 'Abo (ኣቦ)' },
+      { native: 'Brother', learning: 'Haw (ሓው)' },
+      { native: 'Sister', learning: 'Hafti (ሓፍቲ)' },
+      { native: 'Grandmother', learning: 'Abay (ኣባይ)' }
+    ],
+    'Days of Week': [
+      { native: 'Monday', learning: 'Senuy (ሰኑይ)' },
+      { native: 'Tuesday', learning: 'Selus (ሰሉስ)' },
+      { native: 'Wednesday', learning: 'Rebu (ረቡዕ)' },
+      { native: 'Thursday', learning: 'Hamus (ሓሙስ)' },
+      { native: 'Friday', learning: 'Arbi (ዓርቢ)' },
+      { native: 'Saturday', learning: 'Qidam (ቀዳም)' },
+      { native: 'Sunday', learning: 'Senbet (ሰንበት)' }
+    ],
+    'Months': [
+      { native: 'September', learning: 'Meskerem (መስከረም)' },
+      { native: 'October', learning: 'Tiqimti (ጥቅምቲ)' },
+      { native: 'November', learning: 'Hidar (ሕዳር)' },
+      { native: 'December', learning: 'Tahsas (ታሕሳስ)' },
+      { native: 'January', learning: 'Tiri (ጥሪ)' }
+    ],
+    'Basic Verbs': [
+      { native: 'To eat', learning: 'Mebla (ምብላዕ)' },
+      { native: 'To drink', learning: 'Meste (ምስተ)' },
+      { native: 'To sleep', learning: 'Midkas (ምድቃስ)' },
+      { native: 'To go', learning: 'Mikad (ምኻድ)' },
+      { native: 'To come', learning: 'Mimtsa (ምምጻእ)' }
+    ],
+    'Common Objects': [
+      { native: 'Table', learning: 'Tawla (ጣውላ)' },
+      { native: 'Chair', learning: 'Korsi (ኮርሲ)' },
+      { native: 'Door', learning: 'Maatso (ማዕጾ)' },
+      { native: 'Window', learning: 'Meskoti (መስኮት)' },
+      { native: 'Pen', learning: 'Iskiribto (እስክሪብቶ)' }
+    ],
+    'Food Basics': [
+      { native: 'Bread', learning: 'Bani (ባኒ)' },
+      { native: 'Water', learning: 'May (ማይ)' },
+      { native: 'Milk', learning: 'Tseba (ጸባ)' },
+      { native: 'Coffee', learning: 'Bun (ቡን)' },
+      { native: 'Tea', learning: 'Shahi (ሻሂ)' }
+    ],
+    'Animals': [
+      { native: 'Dog', learning: 'Kelbi (ከልቢ)' },
+      { native: 'Cat', learning: 'Dmu (ድሙ)' },
+      { native: 'Cow', learning: 'Lam (ላም)' },
+      { native: 'Sheep', learning: 'Begie (በጊዕ)' },
+      { native: 'Lion', learning: 'Anbessa (ኣንበሳ)' }
+    ],
+    'Body Parts': [
+      { native: 'Head', learning: 'Reesi (ርእሲ)' },
+      { native: 'Eye', learning: 'Ayni (ዓይኒ)' },
+      { native: 'Nose', learning: 'Aficha (ኣፍንጫ)' },
+      { native: 'Mouth', learning: 'Af (ኣፍ)' },
+      { native: 'Hand', learning: 'Id (ኢድ)' }
+    ],
+    'Clothing': [
+      { native: 'Shirt', learning: 'Shemiz (ሸሚዝ)' },
+      { native: 'Pants', learning: 'Surri (ሱሪ)' },
+      { native: 'Shoes', learning: 'Kob (ኮብ)' },
+      { native: 'Hat', learning: 'Kofiya (ቆብ)' },
+      { native: 'Dress', learning: 'Kemis (ቀሚስ)' }
+    ],
+    'Weather': [
+      { native: 'Sun', learning: 'Tsehay (ጸሓይ)' },
+      { native: 'Rain', learning: 'Zinab (ዝናብ)' },
+      { native: 'Wind', learning: 'Nifas (ንፋስ)' },
+      { native: 'Cloud', learning: 'Debena (ደበና)' },
+      { native: 'Hot', learning: 'Muk (ሙቐት)' }
+    ],
+    'Time': [
+      { native: 'Morning', learning: 'Nguho (ንጉሆ)' },
+      { native: 'Afternoon', learning: 'Dihri seati (ድሕሪ ሰዓት)' },
+      { native: 'Night', learning: 'Leyti (ለይቲ)' },
+      { native: 'Today', learning: 'Lomi (ሎሚ)' },
+      { native: 'Tomorrow', learning: 'Tsibah (ጽባሕ)' }
+    ],
+    // Section 2 - Explore
+    'Numbers 11-100': [
+      { native: 'Eleven', learning: 'Aserte hade (ዓሰርተ ሓደ)' },
+      { native: 'Twenty', learning: 'Esra (ዕስራ)' },
+      { native: 'Thirty', learning: 'Selasa (ሰላሳ)' },
+      { native: 'Fifty', learning: 'Hamsa (ሓምሳ)' },
+      { native: 'Hundred', learning: 'Meti (ሚእቲ)' }
+    ],
+    'Directions': [
+      { native: 'Left', learning: 'Tsegam (ጸጋም)' },
+      { native: 'Right', learning: 'Yemin (የሚን)' },
+      { native: 'Straight', learning: 'Qetita (ቀጥታ)' },
+      { native: 'North', learning: 'Semen (ሰሜን)' },
+      { native: 'South', learning: 'Debub (ደቡብ)' }
+    ],
+    'Places in City': [
+      { native: 'Market', learning: 'Shuk (ሹቕ)' },
+      { native: 'Hospital', learning: 'Hospital (ሆስፒታል)' },
+      { native: 'School', learning: 'Temhirti bet (ትምህርቲ ቤት)' },
+      { native: 'Bank', learning: 'Bank (ባንክ)' },
+      { native: 'Church', learning: 'Betekrstian (ቤተክርስትያን)' }
+    ],
+    'Transportation': [
+      { native: 'Car', learning: 'Makina (ማኪና)' },
+      { native: 'Bus', learning: 'Autobus (ኣውቶቡስ)' },
+      { native: 'Airplane', learning: 'Nefriti (ነፈርቲ)' },
+      { native: 'Bicycle', learning: 'Biskleta (ብስክለታ)' },
+      { native: 'Train', learning: 'Babur (ባቡር)' }
+    ],
+    'Shopping': [
+      { native: 'How much?', learning: 'Kndey iye? (ክንደይ ኢዩ?)' },
+      { native: 'Expensive', learning: 'Kebid (ከቢድ)' },
+      { native: 'Cheap', learning: 'Hasus (ሓሱስ)' },
+      { native: 'To buy', learning: 'Migzai (ምግዛእ)' },
+      { native: 'To sell', learning: 'Mishyat (ምሻጥ)' }
+    ],
+    'At Restaurant': [
+      { native: 'Menu', learning: 'Menu (ሜኑ)' },
+      { native: 'Waiter', learning: 'Astelalafi (ኣስተላላፊ)' },
+      { native: 'Bill', learning: 'Hisab (ሒሳብ)' },
+      { native: 'Delicious', learning: 'Teum (ጥዑም)' },
+      { native: 'Hungry', learning: 'Tsemieni (ጸሚኡኒ)' }
+    ],
+    'At Home': [
+      { native: 'Kitchen', learning: 'Madbet (ማድቤት)' },
+      { native: 'Bedroom', learning: 'Kidkas kfli (ቅዳስ ክፍሊ)' },
+      { native: 'Bathroom', learning: 'Metatsebiya (መታጸቢያ)' },
+      { native: 'Living room', learning: 'Salon (ሳሎን)' },
+      { native: 'Garden', learning: 'Gonfo (ጎንፎ)' }
+    ],
+    'Hobbies': [
+      { native: 'Reading', learning: 'Minbab (ምንባብ)' },
+      { native: 'Writing', learning: 'Mitsihaf (ምጽሓፍ)' },
+      { native: 'Drawing', learning: 'Miseti (ምሳኣል)' },
+      { native: 'Cooking', learning: 'Mabsali (ምብሳል)' },
+      { native: 'Dancing', learning: 'Misekos (ምስቃስ)' }
+    ],
+    'Sports': [
+      { native: 'Football', learning: 'Igri kwas (እግሪ ኩዕሶ)' },
+      { native: 'Running', learning: 'Ruhitsa (ሩህጻ)' },
+      { native: 'Swimming', learning: 'Mhwey (ምሕዋይ)' },
+      { native: 'Basketball', learning: 'Basket kwas (ባስኬት ኩዕሶ)' },
+      { native: 'Tennis', learning: 'Tennis (ቴኒስ)' }
+    ],
+    'Music': [
+      { native: 'Song', learning: 'Derfi (ደርፊ)' },
+      { native: 'Singer', learning: 'Derafi (ደራፊ)' },
+      { native: 'Instrument', learning: 'Mesarhi muzika (መሳርሒ ሙዚቃ)' },
+      { native: 'To sing', learning: 'Mderaf (ምድራፍ)' },
+      { native: 'To listen', learning: 'Msmai (ምስማዕ)' }
+    ],
+    'School': [
+      { native: 'Teacher', learning: 'Memhir (መምህር)' },
+      { native: 'Student', learning: 'Temahiro (ተማሃሮ)' },
+      { native: 'Book', learning: 'Metshaf (መጽሓፍ)' },
+      { native: 'Class', learning: 'Kifli (ክፍሊ)' },
+      { native: 'Exam', learning: 'Fetena (ፈተና)' }
+    ],
+    'Work': [
+      { native: 'Office', learning: 'Biro (ቢሮ)' },
+      { native: 'Boss', learning: 'Aleqa (ኣለቃ)' },
+      { native: 'Colleague', learning: 'Masarhi (መሳርሒ)' },
+      { native: 'Salary', learning: 'Demoz (ደሞዝ)' },
+      { native: 'Meeting', learning: 'Abiyot (ኣኼባ)' }
+    ],
+    'Health': [
+      { native: 'Doctor', learning: 'Hakim (ሓኪም)' },
+      { native: 'Medicine', learning: 'Medhanit (መድሃኒት)' },
+      { native: 'Sick', learning: 'Hmam (ሕማም)' },
+      { native: 'Healthy', learning: 'Tena (ጥዕና)' },
+      { native: 'Pain', learning: 'Kebdi (ቃንዛ)' }
+    ],
+    'Emotions': [
+      { native: 'Happy', learning: 'Hagusti (ሓጎስ)' },
+      { native: 'Sad', learning: 'Hazni (ሓዘን)' },
+      { native: 'Angry', learning: 'Nidey (ንዴት)' },
+      { native: 'Afraid', learning: 'Firhat (ፍርሃት)' },
+      { native: 'Surprised', learning: 'Girmit (ግርምቲ)' }
+    ],
+    'Adjectives': [
+      { native: 'Big', learning: 'Zeleqi (ዓቢ)' },
+      { native: 'Small', learning: 'Nishto (ንእሽቶ)' },
+      { native: 'Beautiful', learning: 'Tsebuq (ጽቡቕ)' },
+      { native: 'Ugly', learning: 'Metsfo (ሕማቕ)' },
+      { native: 'Fast', learning: 'Fetun (ፈጣን)' }
+    ]
+  },
+  'afaan-oromo': {
+    'Greetings': [
+      { native: 'Hello', learning: 'Akkam (አካም)' },
+      { native: 'Good morning', learning: 'Akkam bulte (አካም ቡልቴ)' },
+      { native: 'Good evening', learning: 'Akkam oolte (አካም ኦልቴ)' },
+      { native: 'How are you?', learning: 'Akkam jirta? (አካም ጂርታ?)' },
+      { native: 'Goodbye', learning: 'Nagaatti (ናጋቲ)' }
+    ],
+    'Introductions': [
+      { native: 'My name is...', learning: 'Maqaan koo... dha (መቃን ኮ... ዳ)' },
+      { native: 'Nice to meet you', learning: 'Wal baruu kootti gammadeera (ዋል ባሩ ኮቲ ጋማዴራ)' },
+      { native: 'Where are you from?', learning: 'Eessaa dhufte? (ኤሳ ዱፍቴ?)' },
+      { native: 'I am from...', learning: 'Ani... dhufe (አኒ... ዱፌ)' },
+      { native: 'Who are you?', learning: 'Eenyu ati? (ኤኙ አቲ?)' }
+    ],
+    'Numbers 1-10': [
+      { native: 'One', learning: 'Tokko (ቶኮ)' },
+      { native: 'Two', learning: 'Lama (ላማ)' },
+      { native: 'Three', learning: 'Sadii (ሳዲ)' },
+      { native: 'Four', learning: 'Afur (አፉር)' },
+      { native: 'Five', learning: 'Shan (ሻን)' },
+      { native: 'Six', learning: 'Jaha (ጃሃ)' },
+      { native: 'Seven', learning: 'Torba (ቶርባ)' },
+      { native: 'Eight', learning: 'Saddeet (ሳዴቲ)' },
+      { native: 'Nine', learning: 'Sagal (ሳጋል)' },
+      { native: 'Ten', learning: 'Kudhan (ኩዳን)' }
+    ],
+    'Colors': [
+      { native: 'Red', learning: 'Diimaa (ዲማ)' },
+      { native: 'Blue', learning: 'Cuquliisa (ጩቁሊሳ)' },
+      { native: 'Green', learning: 'Magariisa (ማጋሪሳ)' },
+      { native: 'Yellow', learning: 'Keelloo (ኬሎ)' },
+      { native: 'Black', learning: 'Gurraacha (ጉራቻ)' },
+      { native: 'White', learning: 'Adii (አዲ)' }
+    ],
+    'Family': [
+      { native: 'Mother', learning: 'Haadha (ሃዳ)' },
+      { native: 'Father', learning: 'Abbaa (አባ)' },
+      { native: 'Brother', learning: 'Obboleessa (ኦቦሌሳ)' },
+      { native: 'Sister', learning: 'Obboleettii (ኦቦሌቲ)' },
+      { native: 'Grandmother', learning: 'Akkoo (አኮ)' }
+    ],
+    'Days of Week': [
+      { native: 'Monday', learning: 'Wiixata (ዊክሳታ)' },
+      { native: 'Tuesday', learning: 'Kibxata (ኪብሳታ)' },
+      { native: 'Wednesday', learning: 'Roobii (ሮቢ)' },
+      { native: 'Thursday', learning: 'Kamisa (ካሚሳ)' },
+      { native: 'Friday', learning: 'Jimaata (ጂማታ)' },
+      { native: 'Saturday', learning: 'Sanbata (ሳንባታ)' },
+      { native: 'Sunday', learning: 'Dilbata (ዲልባታ)' }
+    ],
+    'Months': [
+      { native: 'September', learning: 'Fulbaana (ፉልባና)' },
+      { native: 'October', learning: 'Onkololeessa (ኦንኮሎሌሳ)' },
+      { native: 'November', learning: 'Sadaasa (ሳዳሳ)' },
+      { native: 'December', learning: 'Muddee (ሙዴ)' },
+      { native: 'January', learning: 'Amajjii (አማጂ)' }
+    ],
+    'Basic Verbs': [
+      { native: 'To eat', learning: 'Nyaachuu (ኛቹ)' },
+      { native: 'To drink', learning: 'Dhuguu (ዱጉ)' },
+      { native: 'To sleep', learning: 'Rafuu (ራፉ)' },
+      { native: 'To go', learning: 'Deemuu (ዴሙ)' },
+      { native: 'To come', learning: 'Dhufuu (ዱፉ)' }
+    ],
+    'Common Objects': [
+      { native: 'Table', learning: 'Minjaala (ሚንጃላ)' },
+      { native: 'Chair', learning: 'Teessoo (ቴሶ)' },
+      { native: 'Door', learning: 'Balbala (ባልባላ)' },
+      { native: 'Window', learning: 'Foddaa (ፎዳ)' },
+      { native: 'Pen', learning: 'Qalama (ቃላማ)' }
+    ],
+    'Food Basics': [
+      { native: 'Bread', learning: 'Daabboo (ዳቦ)' },
+      { native: 'Water', learning: 'Bishaan (ቢሻን)' },
+      { native: 'Milk', learning: 'Aannan (አናን)' },
+      { native: 'Coffee', learning: 'Buna (ቡና)' },
+      { native: 'Tea', learning: 'Shaayii (ሻይ)' }
+    ],
+    'Animals': [
+      { native: 'Dog', learning: 'Saree (ሳሬ)' },
+      { native: 'Cat', learning: 'Adurree (አዱሬ)' },
+      { native: 'Cow', learning: 'Sa\'a (ሳአ)' },
+      { native: 'Sheep', learning: 'Hoolaa (ሆላ)' },
+      { native: 'Lion', learning: 'Leenca (ሌንጫ)' }
+    ],
+    'Body Parts': [
+      { native: 'Head', learning: 'Mata (ማታ)' },
+      { native: 'Eye', learning: 'Ija (ኢጃ)' },
+      { native: 'Nose', learning: 'Funyaan (ፉኛን)' },
+      { native: 'Mouth', learning: 'Afaan (አፋን)' },
+      { native: 'Hand', learning: 'Harka (ሃርካ)' }
+    ],
+    'Clothing': [
+      { native: 'Shirt', learning: 'Shamiizii (ሻሚዚ)' },
+      { native: 'Pants', learning: 'Surree (ሱሬ)' },
+      { native: 'Shoes', learning: 'Kophee (ኮፔ)' },
+      { native: 'Hat', learning: 'Kofiyyaa (ኮፊያ)' },
+      { native: 'Dress', learning: 'Qamisii (ቃሚሲ)' }
+    ],
+    'Weather': [
+      { native: 'Sun', learning: 'Aduu (አዱ)' },
+      { native: 'Rain', learning: 'Bokkaa (ቦካ)' },
+      { native: 'Wind', learning: 'Qilleensa (ቂሌንሳ)' },
+      { native: 'Cloud', learning: 'Duumessa (ዱሜሳ)' },
+      { native: 'Hot', learning: 'Ho\'aa (ሆአ)' }
+    ],
+    'Time': [
+      { native: 'Morning', learning: 'Ganama (ጋናማ)' },
+      { native: 'Afternoon', learning: 'Waaree booda (ዋሬ ቦዳ)' },
+      { native: 'Night', learning: 'Halkan (ሃልካን)' },
+      { native: 'Today', learning: 'Har\'a (ሃራ)' },
+      { native: 'Tomorrow', learning: 'Boru (ቦሩ)' }
+    ],
+    // Section 2 - Explore
+    'Numbers 11-100': [
+      { native: 'Eleven', learning: 'Kudha tokko (ኩዳ ቶኮ)' },
+      { native: 'Twenty', learning: 'Digdama (ዲግዳማ)' },
+      { native: 'Thirty', learning: 'Soddoma (ሶዶማ)' },
+      { native: 'Fifty', learning: 'Shantama (ሻንታማ)' },
+      { native: 'Hundred', learning: 'Dhibba (ዲባ)' }
+    ],
+    'Directions': [
+      { native: 'Left', learning: 'Bitaa (ቢታ)' },
+      { native: 'Right', learning: 'Mirga (ሚርጋ)' },
+      { native: 'Straight', learning: 'Qajeela (ቃጄላ)' },
+      { native: 'North', learning: 'Kaabaa (ካባ)' },
+      { native: 'South', learning: 'Kibba (ኪባ)' }
+    ],
+    'Places in City': [
+      { native: 'Market', learning: 'Gabaa (ጋባ)' },
+      { native: 'Hospital', learning: 'Mana yaalaa (ማና ያላ)' },
+      { native: 'School', learning: 'Mana barumsaa (ማና ባሩምሳ)' },
+      { native: 'Bank', learning: 'Baankii (ባንኪ)' },
+      { native: 'Church', learning: 'Bataskaana (ባታስካና)' }
+    ],
+    'Transportation': [
+      { native: 'Car', learning: 'Konkolaataa (ኮንኮላታ)' },
+      { native: 'Bus', learning: 'Basi (ባሲ)' },
+      { native: 'Airplane', learning: 'Xiyyaara (ሺያራ)' },
+      { native: 'Bicycle', learning: 'Biskileetii (ቢስኪሌቲ)' },
+      { native: 'Train', learning: 'Babura (ባቡራ)' }
+    ],
+    'Shopping': [
+      { native: 'How much?', learning: 'Meeqa? (ሜቃ?)' },
+      { native: 'Expensive', learning: 'Qaalii (ቃሊ)' },
+      { native: 'Cheap', learning: 'Rakasa (ራካሳ)' },
+      { native: 'To buy', learning: 'Bituu (ቢቱ)' },
+      { native: 'To sell', learning: 'Gurguruu (ጉርጉሩ)' }
+    ],
+    'At Restaurant': [
+      { native: 'Menu', learning: 'Tarree nyaataa (ታሬ ኛታ)' },
+      { native: 'Waiter', learning: 'Tajaajilaa (ታጃጂላ)' },
+      { native: 'Bill', learning: 'Hisaaba (ሒሳባ)' },
+      { native: 'Delicious', learning: 'Miidhaga (ሚዳጋ)' },
+      { native: 'Hungry', learning: 'Beela\'aa (ቤላአ)' }
+    ],
+    'At Home': [
+      { native: 'Kitchen', learning: 'Mana nyaataa (ማና ኛታ)' },
+      { native: 'Bedroom', learning: 'Kutaa cisiichaa (ኩታ ጪሲቻ)' },
+      { native: 'Bathroom', learning: 'Mana dhiqannaa (ማና ዲቃና)' },
+      { native: 'Living room', learning: 'Kutaa keessummaa (ኩታ ኬሱማ)' },
+      { native: 'Garden', learning: 'Biqiltuu (ቢቂልቱ)' }
+    ],
+    'Hobbies': [
+      { native: 'Reading', learning: 'Dubbisuu (ዱቢሱ)' },
+      { native: 'Writing', learning: 'Barreessuu (ባሬሱ)' },
+      { native: 'Drawing', learning: 'Kaasuu (ካሱ)' },
+      { native: 'Cooking', learning: 'Bilcheessuu (ቢልቼሱ)' },
+      { native: 'Dancing', learning: 'Sirbuu (ሲርቡ)' }
+    ],
+    'Sports': [
+      { native: 'Football', learning: 'Kubbaa miilaa (ኩባ ሚላ)' },
+      { native: 'Running', learning: 'Fiiguu (ፊጉ)' },
+      { native: 'Swimming', learning: 'Daakuu (ዳኩ)' },
+      { native: 'Basketball', learning: 'Kubbaa harkaa (ኩባ ሃርካ)' },
+      { native: 'Tennis', learning: 'Teenisii (ቴኒሲ)' }
+    ],
+    'Music': [
+      { native: 'Song', learning: 'Sirba (ሲርባ)' },
+      { native: 'Singer', learning: 'Sirbaa (ሲርባ)' },
+      { native: 'Instrument', learning: 'Meeshaa muuziqaa (ሜሻ ሙዚቃ)' },
+      { native: 'To sing', learning: 'Sirbuu (ሲርቡ)' },
+      { native: 'To listen', learning: 'Dhaggeeffachuu (ዳጌፋቹ)' }
+    ],
+    'School': [
+      { native: 'Teacher', learning: 'Barsiisaa (ባርሲሳ)' },
+      { native: 'Student', learning: 'Barataa (ባራታ)' },
+      { native: 'Book', learning: 'Kitaaba (ኪታባ)' },
+      { native: 'Class', learning: 'Kutaa (ኩታ)' },
+      { native: 'Exam', learning: 'Qormaata (ቆርማታ)' }
+    ],
+    'Work': [
+      { native: 'Office', learning: 'Waajjira (ዋጂራ)' },
+      { native: 'Boss', learning: 'Hooggana (ሆጋና)' },
+      { native: 'Colleague', learning: 'Hiriyyaa hojii (ሂሪያ ሆጂ)' },
+      { native: 'Salary', learning: 'Mindaa (ሚንዳ)' },
+      { native: 'Meeting', learning: 'Wal-gaʼii (ዋል-ጋኢ)' }
+    ],
+    'Health': [
+      { native: 'Doctor', learning: 'Ogeessa fayyaa (ኦገሳ ፋያ)' },
+      { native: 'Medicine', learning: 'Qoricha (ቆሪቻ)' },
+      { native: 'Sick', learning: 'Dhukkuba (ዱኩባ)' },
+      { native: 'Healthy', learning: 'Fayyaa (ፋያ)' },
+      { native: 'Pain', learning: 'Dhukkubbii (ዱኩቢ)' }
+    ],
+    'Emotions': [
+      { native: 'Happy', learning: 'Gammachuu (ጋማቹ)' },
+      { native: 'Sad', learning: 'Gadda (ጋዳ)' },
+      { native: 'Angry', learning: 'Aaruu (ኣሩ)' },
+      { native: 'Afraid', learning: 'Sodaa (ሶዳ)' },
+      { native: 'Surprised', learning: 'Raajeffachuu (ራጀፋቹ)' }
+    ],
+    'Adjectives': [
+      { native: 'Big', learning: 'Guddaa (ጉዳ)' },
+      { native: 'Small', learning: 'Xiqqaa (ሺቃ)' },
+      { native: 'Beautiful', learning: 'Bareeda (ባሬዳ)' },
+      { native: 'Ugly', learning: 'Fokkisaa (ፎኪሳ)' },
+      { native: 'Fast', learning: 'Ariifata (አሪፋታ)' }
+    ]
+  },
+  'somali': {
+    'Greetings': [
+      { native: 'Hello', learning: 'Iska warran (ኢስካ ዋራን)' },
+      { native: 'Good morning', learning: 'Subax wanaagsan (ሱባህ ዋንአግሳን)' },
+      { native: 'Good evening', learning: 'Galab wanaagsan (ጋላብ ዋንአግሳን)' },
+      { native: 'How are you?', learning: 'Ma nabad baa? (ማ ናባድ ባ?)' },
+      { native: 'Goodbye', learning: 'Nabad gelyo (ናባድ ጌልዮ)' }
+    ],
+    'Introductions': [
+      { native: 'My name is...', learning: 'Magacaygu waa... (ማጋካይጉ ዋ...)' },
+      { native: 'Nice to meet you', learning: 'Barasho wanaagsan (ባራሾ ዋንአግሳን)' },
+      { native: 'Where are you from?', learning: 'Xagee baad ka timid? (ሃጌ ባድ ካ ቲሚድ?)' },
+      { native: 'I am from...', learning: 'Waxaan ka imid... (ዋሃን ካ ኢሚድ...)' },
+      { native: 'Who are you?', learning: 'Kumaad tahay? (ኩማድ ታሃይ?)' }
+    ],
+    'Numbers 1-10': [
+      { native: 'One', learning: 'Kow (ኮው)' },
+      { native: 'Two', learning: 'Laba (ላባ)' },
+      { native: 'Three', learning: 'Saddex (ሳዴህ)' },
+      { native: 'Four', learning: 'Afar (አፋር)' },
+      { native: 'Five', learning: 'Shan (ሻን)' },
+      { native: 'Six', learning: 'Lix (ሊህ)' },
+      { native: 'Seven', learning: 'Todoba (ቶዶባ)' },
+      { native: 'Eight', learning: 'Sideed (ሲዴድ)' },
+      { native: 'Nine', learning: 'Sagaal (ሳጋል)' },
+      { native: 'Ten', learning: 'Toban (ቶባን)' }
+    ],
+    'Colors': [
+      { native: 'Red', learning: 'Casaan (ካሳን)' },
+      { native: 'Blue', learning: 'Buluug (ቡሉግ)' },
+      { native: 'Green', learning: 'Cagaar (ካጋር)' },
+      { native: 'Yellow', learning: 'Huruud (ሁሩድ)' },
+      { native: 'Black', learning: 'Madow (ማዶው)' },
+      { native: 'White', learning: 'Cadaan (ካዳን)' }
+    ],
+    'Family': [
+      { native: 'Mother', learning: 'Hooyo (ሆዮ)' },
+      { native: 'Father', learning: 'Aabo (አቦ)' },
+      { native: 'Brother', learning: 'Walaal (ዋላል)' },
+      { native: 'Sister', learning: 'Walaash (ዋላሽ)' },
+      { native: 'Grandmother', learning: 'Ayeeyo (አዬዮ)' }
+    ],
+    'Days of Week': [
+      { native: 'Monday', learning: 'Isniin (ኢስኒን)' },
+      { native: 'Tuesday', learning: 'Talaado (ታላዶ)' },
+      { native: 'Wednesday', learning: 'Arbaco (አርባኮ)' },
+      { native: 'Thursday', learning: 'Khamiis (ካሚስ)' },
+      { native: 'Friday', learning: 'Jimco (ጂምኮ)' },
+      { native: 'Saturday', learning: 'Sabti (ሳብቲ)' },
+      { native: 'Sunday', learning: 'Axad (አሃድ)' }
+    ],
+    'Months': [
+      { native: 'September', learning: 'Sebtembar (ሴፕቴምባር)' },
+      { native: 'October', learning: 'Oktoobar (ኦክቶባር)' },
+      { native: 'November', learning: 'Nofembar (ኖቬምባር)' },
+      { native: 'December', learning: 'Disembar (ዲሴምባር)' },
+      { native: 'January', learning: 'Janaayo (ጃናዮ)' }
+    ],
+    'Basic Verbs': [
+      { native: 'To eat', learning: 'Cunid (ኩኒድ)' },
+      { native: 'To drink', learning: 'Cabid (ካቢድ)' },
+      { native: 'To sleep', learning: 'Seexasho (ሴሃሾ)' },
+      { native: 'To go', learning: 'Tagid (ታጊድ)' },
+      { native: 'To come', learning: 'Imaansho (ኢማንሾ)' }
+    ],
+    'Common Objects': [
+      { native: 'Table', learning: 'Miis (ሚስ)' },
+      { native: 'Chair', learning: 'Kursi (ኩርሲ)' },
+      { native: 'Door', learning: 'Albaab (አልባብ)' },
+      { native: 'Window', learning: 'Daaqad (ዳቃድ)' },
+      { native: 'Pen', learning: 'Qalin (ቃሊን)' }
+    ],
+    'Food Basics': [
+      { native: 'Bread', learning: 'Rooti (ሮቲ)' },
+      { native: 'Water', learning: 'Biyo (ቢዮ)' },
+      { native: 'Milk', learning: 'Caano (ካኖ)' },
+      { native: 'Coffee', learning: 'Qaxwe (ቃህዌ)' },
+      { native: 'Tea', learning: 'Shaah (ሻህ)' }
+    ],
+    'Animals': [
+      { native: 'Dog', learning: 'Eey (ኤይ)' },
+      { native: 'Cat', learning: 'Bisad (ቢሳድ)' },
+      { native: 'Cow', learning: 'Lo\' (ሎ)' },
+      { native: 'Sheep', learning: 'Ido (ኢዶ)' },
+      { native: 'Lion', learning: 'Libaax (ሊባህ)' }
+    ],
+    'Body Parts': [
+      { native: 'Head', learning: 'Madax (ማዳህ)' },
+      { native: 'Eye', learning: 'Il (ኢል)' },
+      { native: 'Nose', learning: 'San (ሳን)' },
+      { native: 'Mouth', learning: 'Af (አፍ)' },
+      { native: 'Hand', learning: 'Gacan (ጋካን)' }
+    ],
+    'Clothing': [
+      { native: 'Shirt', learning: 'Shaati (ሻቲ)' },
+      { native: 'Pants', learning: 'Surwaal (ሱርዋል)' },
+      { native: 'Shoes', learning: 'Kab (ካብ)' },
+      { native: 'Hat', learning: 'Koofiyad (ኮፊያድ)' },
+      { native: 'Dress', learning: 'Guntiino (ጉንቲኖ)' }
+    ],
+    'Weather': [
+      { native: 'Sun', learning: 'Qorrax (ቆራህ)' },
+      { native: 'Rain', learning: 'Roob (ሮብ)' },
+      { native: 'Wind', learning: 'Dabayl (ዳባይል)' },
+      { native: 'Cloud', learning: 'Daruur (ዳሩር)' },
+      { native: 'Hot', learning: 'Kulul (ኩሉል)' }
+    ],
+    'Time': [
+      { native: 'Morning', learning: 'Subax (ሱባህ)' },
+      { native: 'Afternoon', learning: 'Galab (ጋላብ)' },
+      { native: 'Night', learning: 'Habeen (ሃቤን)' },
+      { native: 'Today', learning: 'Maanta (ማንታ)' },
+      { native: 'Tomorrow', learning: 'Berri (ቤሪ)' }
+    ],
+    // Section 2 - Explore
+    'Numbers 11-100': [
+      { native: 'Eleven', learning: 'Kow iyo toban (ኮው ኢዮ ቶባን)' },
+      { native: 'Twenty', learning: 'Labaatan (ላባታን)' },
+      { native: 'Thirty', learning: 'Soddon (ሶዶን)' },
+      { native: 'Fifty', learning: 'Konton (ኮንቶን)' },
+      { native: 'Hundred', learning: 'Boqol (ቦቆል)' }
+    ],
+    'Directions': [
+      { native: 'Left', learning: 'Bidix (ቢዲህ)' },
+      { native: 'Right', learning: 'Midig (ሚዲግ)' },
+      { native: 'Straight', learning: 'Toos (ቶስ)' },
+      { native: 'North', learning: 'Waqooyi (ዋቆዪ)' },
+      { native: 'South', learning: 'Koonfur (ኮንፉር)' }
+    ],
+    'Places in City': [
+      { native: 'Market', learning: 'Suuq (ሱቅ)' },
+      { native: 'Hospital', learning: 'Isbitaal (ኢስቢታል)' },
+      { native: 'School', learning: 'Dugsi (ዱግሲ)' },
+      { native: 'Bank', learning: 'Bangii (ባንጊ)' },
+      { native: 'Mosque', learning: 'Masjid (ማስጂድ)' }
+    ],
+    'Transportation': [
+      { native: 'Car', learning: 'Gaari (ጋሪ)' },
+      { native: 'Bus', learning: 'Bas (ባስ)' },
+      { native: 'Airplane', learning: 'Diyaarad (ዲያራድ)' },
+      { native: 'Bicycle', learning: 'Baaskiil (ባስኪል)' },
+      { native: 'Boat', learning: 'Doon (ዶን)' }
+    ],
+    'Shopping': [
+      { native: 'How much?', learning: 'Immisa? (ኢሚሳ?)' },
+      { native: 'Expensive', learning: 'Qaali (ቃሊ)' },
+      { native: 'Cheap', learning: 'Jaban (ጃባን)' },
+      { native: 'To buy', learning: 'Iibsasho (ኢብሳሾ)' },
+      { native: 'To sell', learning: 'Iibid (ኢቢድ)' }
+    ],
+    'At Restaurant': [
+      { native: 'Menu', learning: 'Liiska cuntada (ሊስካ ኩንታዳ)' },
+      { native: 'Waiter', learning: 'Adeegaha (አዴጋሃ)' },
+      { native: 'Bill', learning: 'Biilka (ቢልካ)' },
+      { native: 'Delicious', learning: 'Macaan (ማካን)' },
+      { native: 'Hungry', learning: 'Gaajo (ጋጆ)' }
+    ],
+    'At Home': [
+      { native: 'Kitchen', learning: 'Jikada (ጂካዳ)' },
+      { native: 'Bedroom', learning: 'Qolka jiifka (ቆልካ ጂፍካ)' },
+      { native: 'Bathroom', learning: 'Musqusha (ሙስቁሻ)' },
+      { native: 'Living room', learning: 'Qolka fadhiga (ቆልካ ፋዲጋ)' },
+      { native: 'Garden', learning: 'Beerta (ቤርታ)' }
+    ],
+    'Hobbies': [
+      { native: 'Reading', learning: 'Akhriska (አኽሪስካ)' },
+      { native: 'Writing', learning: 'Qorista (ቆሪስታ)' },
+      { native: 'Drawing', learning: 'Sawirka (ሳዊርካ)' },
+      { native: 'Cooking', learning: 'Karinta (ካሪንታ)' },
+      { native: 'Dancing', learning: 'Cayaarka (ካያርካ)' }
+    ],
+    'Sports': [
+      { native: 'Football', learning: 'Kubadda cagta (ኩባዳ ካግታ)' },
+      { native: 'Running', learning: 'Orodka (ኦሮድካ)' },
+      { native: 'Swimming', learning: 'Dabaasha (ዳባሻ)' },
+      { native: 'Basketball', learning: 'Kubadda koleyga (ኩባዳ ኮሌይጋ)' },
+      { native: 'Tennis', learning: 'Teeniska (ቴኒስካ)' }
+    ],
+    'Music': [
+      { native: 'Song', learning: 'Hees (ሄስ)' },
+      { native: 'Singer', learning: 'Fanaanka (ፋናንካ)' },
+      { native: 'Instrument', learning: 'Aaladda muusiga (ኣላዳ ሙሲጋ)' },
+      { native: 'To sing', learning: 'Heesid (ሄሲድ)' },
+      { native: 'To listen', learning: 'Dhageysasho (ዳገይሳሾ)' }
+    ],
+    'School': [
+      { native: 'Teacher', learning: 'Macalin (ማካሊን)' },
+      { native: 'Student', learning: 'Arday (አርዳይ)' },
+      { native: 'Book', learning: 'Buug (ቡግ)' },
+      { native: 'Class', learning: 'Fasal (ፋሳል)' },
+      { native: 'Exam', learning: 'Imtixaan (ኢምቲሃን)' }
+    ],
+    'Work': [
+      { native: 'Office', learning: 'Xafiiska (ሃፊስካ)' },
+      { native: 'Boss', learning: 'Madaxa (ማዳሃ)' },
+      { native: 'Colleague', learning: 'Saaxiibka shaqada (ሳሂብካ ሻቃዳ)' },
+      { native: 'Salary', learning: 'Mushahara (ሙሻሃራ)' },
+      { native: 'Meeting', learning: 'Kulan (ኩላን)' }
+    ],
+    'Health': [
+      { native: 'Doctor', learning: 'Dhakhtar (ዳኽታር)' },
+      { native: 'Medicine', learning: 'Daawo (ዳዎ)' },
+      { native: 'Sick', learning: 'Bukaan (ቡካን)' },
+      { native: 'Healthy', learning: 'Caafimaad (ካፊማድ)' },
+      { native: 'Pain', learning: 'Xanuun (ሃኑን)' }
+    ],
+    'Emotions': [
+      { native: 'Happy', learning: 'Faraxsan (ፋራህሳን)' },
+      { native: 'Sad', learning: 'Murugaysan (ሙሩጋይሳን)' },
+      { native: 'Angry', learning: 'Xanaaqsan (ሃናቅሳን)' },
+      { native: 'Afraid', learning: 'Baqaya (ባቃያ)' },
+      { native: 'Surprised', learning: 'Yaab (ያብ)' }
+    ],
+    'Adjectives': [
+      { native: 'Big', learning: 'Weyn (ወይን)' },
+      { native: 'Small', learning: 'Yar (ያር)' },
+      { native: 'Beautiful', learning: 'Qurux (ቁሩህ)' },
+      { native: 'Ugly', learning: 'Fool xun (ፎል ሁን)' },
+      { native: 'Fast', learning: 'Degdeg (ደግደግ)' }
+    ]
+  }
+}
+
+const generateSectionsAndUnits = (languagePair) => {
+  const [nativeLang, learningLang] = languagePair.split('-')
+  const sections = []
+
+  // Section themes
+  const sectionThemes = [
+    { name: 'Foundations', description: 'Build your foundation' },
+    { name: 'Explore', description: 'Explore new concepts' },
+    { name: 'Expand', description: 'Expand your knowledge' },
+    { name: 'Communicate', description: 'Start communicating' },
+    { name: 'Express', description: 'Express yourself' },
+    { name: 'Interact', description: 'Interact with others' },
+    { name: 'Master', description: 'Master the language' },
+    { name: 'Advance', description: 'Advanced topics' },
+    { name: 'Specialize', description: 'Specialized vocabulary' },
+    { name: 'Perfect', description: 'Perfect your skills' },
+  ]
+
+  // Unit topics for each section
+  const unitTopics = [
+    // Section 1 - Foundations
+    ['Greetings', 'Introductions', 'Numbers 1-10', 'Colors', 'Family', 'Days of Week', 'Months', 'Basic Verbs', 'Common Objects', 'Food Basics', 'Animals', 'Body Parts', 'Clothing', 'Weather', 'Time'],
+    // Section 2 - Explore
+    ['Numbers 11-100', 'Directions', 'Places in City', 'Transportation', 'Shopping', 'At Restaurant', 'At Home', 'Hobbies', 'Sports', 'Music', 'School', 'Work', 'Health', 'Emotions', 'Adjectives'],
+    // Section 3 - Expand
+    ['Past Tense', 'Future Tense', 'Questions', 'Negation', 'Comparisons', 'Possessives', 'Prepositions', 'Conjunctions', 'Pronouns', 'Adverbs', 'Travel', 'Hotel', 'Airport', 'Nature', 'Seasons'],
+    // Section 4 - Communicate
+    ['Phone Calls', 'Emails', 'Letters', 'Conversations', 'Opinions', 'Agreements', 'Disagreements', 'Requests', 'Offers', 'Invitations', 'Apologies', 'Thanks', 'Compliments', 'Complaints', 'Suggestions'],
+    // Section 5 - Express
+    ['Feelings', 'Desires', 'Preferences', 'Plans', 'Dreams', 'Memories', 'Stories', 'Descriptions', 'Explanations', 'Arguments', 'Debates', 'Presentations', 'Reports', 'Reviews', 'Recommendations'],
+    // Section 6 - Interact
+    ['Small Talk', 'Networking', 'Meetings', 'Interviews', 'Negotiations', 'Discussions', 'Collaboration', 'Teamwork', 'Leadership', 'Feedback', 'Criticism', 'Praise', 'Motivation', 'Conflict Resolution', 'Problem Solving'],
+    // Section 7 - Master
+    ['Idioms', 'Proverbs', 'Slang', 'Formal Language', 'Informal Language', 'Written Style', 'Spoken Style', 'Poetry', 'Literature', 'News', 'Politics', 'Economics', 'Science', 'Technology', 'Culture'],
+    // Section 8 - Advance
+    ['Advanced Grammar', 'Complex Sentences', 'Passive Voice', 'Conditional', 'Subjunctive', 'Reported Speech', 'Relative Clauses', 'Participles', 'Gerunds', 'Infinitives', 'Modal Verbs', 'Phrasal Verbs', 'Collocations', 'Fixed Expressions', 'Discourse Markers'],
+    // Section 9 - Specialize
+    ['Business', 'Legal', 'Medical', 'Engineering', 'IT', 'Finance', 'Marketing', 'Sales', 'HR', 'Education', 'Research', 'Media', 'Arts', 'Sports', 'Tourism'],
+    // Section 10 - Perfect
+    ['Pronunciation', 'Intonation', 'Rhythm', 'Stress', 'Accent', 'Fluency', 'Accuracy', 'Vocabulary Range', 'Grammar Mastery', 'Reading Speed', 'Listening Comprehension', 'Writing Skills', 'Speaking Confidence', 'Cultural Nuances', 'Native-like Expression'],
+  ]
+
+  for (let sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
+    const section = {
+      id: sectionIndex + 1,
+      name: sectionThemes[sectionIndex].name,
+      description: sectionThemes[sectionIndex].description,
+      units: []
+    }
+
+    for (let unitIndex = 0; unitIndex < 15; unitIndex++) {
+      const globalUnitNumber = sectionIndex * 15 + unitIndex + 1
+      const topic = unitTopics[sectionIndex][unitIndex]
+      const unit = {
+        id: globalUnitNumber,
+        sectionId: section.id,
+        title: topic,
+        description: `Learn about ${topic.toLowerCase()}`,
+        lessons: []
+      }
+
+      // Each unit has 5 lessons
+      for (let lessonIndex = 0; lessonIndex < 5; lessonIndex++) {
+        const lesson = {
+          id: `${globalUnitNumber}-${lessonIndex + 1}`,
+          unitId: globalUnitNumber,
+          title: `${topic} - Lesson ${lessonIndex + 1}`,
+          exercises: generateExercises(topic, lessonIndex + 1, learningLang, nativeLang)
+        }
+        unit.lessons.push(lesson)
+      }
+
+      section.units.push(unit)
+    }
+
+    sections.push(section)
+  }
+
+  return sections
+}
+
+// Generate sample exercises for a lesson
+const generateExercises = (topic, lessonNumber, learningLang, nativeLang) => {
+  const exercises = []
+  const content = realContent[learningLang]?.[topic] || []
+  const item = content[lessonNumber - 1] || { native: `${topic} phrase ${lessonNumber}`, learning: `Sample ${learningLang} translation` }
+
+  // Helper to get random distractors
+  const getDistractors = (correctAnswer, type = 'learning', count = 3) => {
+    const distractors = []
+    const available = content.filter(c => c[type] !== correctAnswer)
+
+    // If not enough items in current topic, add some generic ones or from other topics if possible
+    // For now, we'll duplicate or use placeholders if absolutely necessary, but we have enough data in Section 1
+    while (distractors.length < count) {
+      if (available.length > 0) {
+        const randomIndex = Math.floor(Math.random() * available.length)
+        distractors.push(available[randomIndex][type])
+        available.splice(randomIndex, 1)
+      } else {
+        distractors.push(type === 'learning' ? `Option ${distractors.length + 1}` : `Option ${distractors.length + 1}`)
+      }
+    }
+    return distractors
+  }
+
+  // 1. Translation (Native to Learning)
+  const t1Distractors = getDistractors(item.learning, 'learning')
+  exercises.push({
+    type: 'translation',
+    question: `How do you say "${item.native}" in ${learningLang}?`,
+    answer: item.learning,
+    options: [item.learning, ...t1Distractors].sort(() => Math.random() - 0.5),
+    audio: null,
+  })
+
+  // 2. Multiple Choice (Vocabulary)
+  const mcDistractors = getDistractors(item.learning, 'learning')
+  exercises.push({
+    type: 'multipleChoice',
+    question: `Which of these means "${item.native}"?`,
+    answer: item.learning,
+    options: [item.learning, ...mcDistractors].sort(() => Math.random() - 0.5),
+  })
+
+  // 3. Fill in the Blank
+  const fbDistractors = getDistractors(item.learning, 'learning')
+  exercises.push({
+    type: 'fillBlank',
+    sentence: `${item.native} is ___ in ${learningLang}.`,
+    answer: item.learning,
+    options: [item.learning, ...fbDistractors].sort(() => Math.random() - 0.5),
+  })
+
+  // 4. Matching
+  const pairs = content.slice(0, 4).map(c => ({ left: c.native, right: c.learning }))
+  // If not enough pairs, fill with placeholders (shouldn't happen for Section 1)
+  if (pairs.length < 4) {
+    for (let i = pairs.length; i < 4; i++) {
+      pairs.push({ left: `Word ${i + 1}`, right: `Translation ${i + 1}` })
+    }
+  }
+  exercises.push({
+    type: 'matching',
+    pairs: pairs,
+  })
+
+  // 5. Translation (Learning to Native)
+  const t2Distractors = getDistractors(item.native, 'native')
+  exercises.push({
+    type: 'translation',
+    question: `Translate "${item.learning}" to ${nativeLang}.`,
+    answer: item.native,
+    options: [item.native, ...t2Distractors].sort(() => Math.random() - 0.5),
+  })
+
+  return exercises
+}
+
+// Export lesson data for all language pairs
+export const sectionsData = {
+  'english-amharic': generateSectionsAndUnits('english-amharic'),
+  'english-tigrinya': generateSectionsAndUnits('english-tigrinya'),
+  'english-afaan-oromo': generateSectionsAndUnits('english-afaan-oromo'),
+  'english-somali': generateSectionsAndUnits('english-somali'),
+  'amharic-english': generateSectionsAndUnits('amharic-english'),
+  'tigrinya-english': generateSectionsAndUnits('tigrinya-english'),
+  'afaan-oromo-english': generateSectionsAndUnits('afaan-oromo-english'),
+  'somali-english': generateSectionsAndUnits('somali-english'),
+}
+
+// Helper function to get sections for a language pair
+export const getSections = (nativeLanguage, learningLanguage) => {
+  const key = `${nativeLanguage}-${learningLanguage}`
+  return sectionsData[key] || null
+}
+
+// Helper function to get a specific section
+export const getSection = (nativeLanguage, learningLanguage, sectionId) => {
+  const sections = getSections(nativeLanguage, learningLanguage)
+  if (!sections) return null
+  return sections.find(s => s.id === parseInt(sectionId))
+}
+
+// Helper function to get a specific unit
+export const getUnit = (nativeLanguage, learningLanguage, unitId) => {
+  const sections = getSections(nativeLanguage, learningLanguage)
+  if (!sections) return null
+
+  for (const section of sections) {
+    const unit = section.units.find(u => u.id === parseInt(unitId))
+    if (unit) return unit
+  }
+  return null
+}
+
+// Helper function to get a specific lesson
+export const getLesson = (nativeLanguage, learningLanguage, unitId, lessonId) => {
+  const unit = getUnit(nativeLanguage, learningLanguage, unitId)
+  if (!unit) return null
+  return unit.lessons.find(l => l.id === lessonId)
+}
+
+// Get all units flattened (for backward compatibility)
+export const getAllUnits = (nativeLanguage, learningLanguage) => {
+  const sections = getSections(nativeLanguage, learningLanguage)
+  if (!sections) return []
+
+  const allUnits = []
+  sections.forEach(section => {
+    allUnits.push(...section.units)
+  })
+  return allUnits
+}

@@ -1,4 +1,4 @@
-# PolyglotEthiopia 🇪🇹
+# Adewe 🇪🇹
 
 A Duolingo-style language learning app for Ethiopian and East African languages.
 

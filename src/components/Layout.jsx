@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { User, Flame, Heart, LogOut, BookOpen, Home } from 'lucide-react'
+import { User, Flame, Heart, LogOut, BookOpen, Home, Shield } from 'lucide-react'
 import useStore from '../store/useStore'
 import { useAuth } from '../context/AuthContext'
 
@@ -20,7 +20,7 @@ function Layout({ children }) {
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo Text */}
-            <span className="text-base font-bold bg-gradient-to-r from-emerald-400 to-yellow-400 bg-clip-text text-transparent">
+            <span className="text-base font-bold bg-gradient-to-r from-brand-primary to-yellow-400 bg-clip-text text-transparent">
               Adewe
             </span>
 
@@ -32,7 +32,7 @@ function Layout({ children }) {
                   `flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     isActive
                       ? 'text-white'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-gray-400 hover:text-white'
                   }`
                 }
               >
@@ -46,13 +46,29 @@ function Layout({ children }) {
                   `flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     isActive
                       ? 'text-white'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-gray-400 hover:text-white'
                   }`
                 }
               >
                 <User size={16} />
                 <span>Profile</span>
               </NavLink>
+
+              {profile?.is_admin && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'text-brand-primary'
+                        : 'text-gray-400 hover:text-brand-primary'
+                    }`
+                  }
+                >
+                  <Shield size={16} />
+                  <span>Admin</span>
+                </NavLink>
+              )}
             </nav>
 
             {/* Right Side - Stats & Sign Out */}
@@ -72,7 +88,7 @@ function Layout({ children }) {
               {/* Sign Out - Hidden on mobile */}
               <button
                 onClick={handleSignOut}
-                className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
+                className="hidden md:flex p-1.5 rounded-lg text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
                 title="Sign Out"
               >
                 <LogOut size={18} />
@@ -95,8 +111,8 @@ function Layout({ children }) {
             className={({ isActive }) =>
               `flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-xl transition-all ${
                 isActive
-                  ? 'text-emerald-400'
-                  : 'text-slate-400'
+                  ? 'text-brand-primary'
+                  : 'text-gray-400'
               }`
             }
           >
@@ -107,10 +123,10 @@ function Layout({ children }) {
           <NavLink
             to="/profile"
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-xl transition-all ${
+              `flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all ${
                 isActive
-                  ? 'text-emerald-400'
-                  : 'text-slate-400'
+                  ? 'text-brand-primary'
+                  : 'text-gray-400'
               }`
             }
           >
@@ -118,9 +134,25 @@ function Layout({ children }) {
             <span className="text-xs font-medium">Profile</span>
           </NavLink>
 
+          {profile?.is_admin && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all ${
+                  isActive
+                    ? 'text-brand-primary'
+                    : 'text-gray-400'
+                }`
+              }
+            >
+              <Shield size={22} />
+              <span className="text-xs font-medium">Admin</span>
+            </NavLink>
+          )}
+
           <button
             onClick={handleSignOut}
-            className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-xl text-slate-400 hover:text-red-400 transition-all"
+            className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl text-gray-400 hover:text-red-400 transition-all"
           >
             <LogOut size={22} />
             <span className="text-xs font-medium">Logout</span>

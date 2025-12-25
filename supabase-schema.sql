@@ -1,4 +1,4 @@
--- Supabase Schema for PolyglotEthiopia
+-- Supabase Schema for Adewe
 -- Run this ENTIRE file in your Supabase SQL Editor
 
 -- Drop existing table and recreate (WARNING: This will delete existing data)

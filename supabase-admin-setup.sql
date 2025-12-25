@@ -1,4 +1,4 @@
--- Super Admin Setup for PolyglotEthiopia
+-- Super Admin Setup for Adewe
 -- Run this AFTER running supabase-schema.sql
 
 -- First, update the profiles table to add phone and is_admin if they don't exist

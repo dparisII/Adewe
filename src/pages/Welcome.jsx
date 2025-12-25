@@ -1,9 +1,66 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { Sun, Moon, ChevronDown, BookOpen, Trophy, Zap, Users, Globe, Sparkles, ArrowRight, Play } from 'lucide-react'
+import { Sun, Moon, ChevronDown, BookOpen, Trophy, Zap, Users, Globe, Sparkles, ArrowRight, Play, Check, Heart, Headphones, Download, Star, Shield, Crown } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useBranding } from '../context/BrandingContext'
 import useThemeStore from '../store/useThemeStore'
 import useLanguageStore, { availableLanguages } from '../store/useLanguageStore'
+
+// Pricing plans
+const pricingPlans = [
+  {
+    name: 'Free',
+    price: 0,
+    period: 'forever',
+    description: 'Perfect for getting started',
+    features: [
+      '5 hearts per day',
+      'Basic lessons',
+      '2 languages',
+      'Progress tracking',
+      'Community support'
+    ],
+    cta: 'Start Free',
+    popular: false,
+    icon: Heart
+  },
+  {
+    name: 'Premium',
+    price: 299,
+    period: 'month',
+    currency: 'ETB',
+    description: 'Unlock your full potential',
+    features: [
+      'Unlimited hearts',
+      'All lessons & levels',
+      'All 5 languages',
+      'Offline mode',
+      'No ads',
+      'Priority support',
+      'Audio pronunciation'
+    ],
+    cta: 'Go Premium',
+    popular: true,
+    icon: Crown
+  },
+  {
+    name: 'Family',
+    price: 499,
+    period: 'month',
+    currency: 'ETB',
+    description: 'Learn together as a family',
+    features: [
+      'Everything in Premium',
+      'Up to 6 family members',
+      'Family progress dashboard',
+      'Shared achievements',
+      'Parental controls'
+    ],
+    cta: 'Get Family Plan',
+    popular: false,
+    icon: Users
+  }
+]
 
 // Language cards for display
 const languageCards = [
@@ -16,6 +73,7 @@ const languageCards = [
 function Welcome() {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
+  const { branding } = useBranding()
   const { theme, toggleTheme } = useThemeStore()
   const { language, setLanguage, t } = useLanguageStore()
   const [langDropdownOpen, setLangDropdownOpen] = useState(false)
@@ -57,7 +115,7 @@ function Welcome() {
         <span className={`text-xl font-bold ${
           theme === 'dark' ? 'text-white' : 'text-slate-800'
         }`}>
-          Adewe
+          {branding.site_name || 'Adewe'}
         </span>
 
         <div className="flex items-center gap-2">
@@ -361,6 +419,160 @@ function Welcome() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section id="pricing" className={`relative z-10 px-6 py-20 ${
+        theme === 'dark' ? 'bg-slate-900/50' : 'bg-slate-50'
+      }`}>
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium mb-4 ${
+              theme === 'dark' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-100 text-emerald-600'
+            }`}>
+              Pricing Plans
+            </span>
+            <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${
+              theme === 'dark' ? 'text-white' : 'text-slate-900'
+            }`}>
+              Choose Your Learning Journey
+            </h2>
+            <p className={`max-w-2xl mx-auto ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+              Start free and upgrade anytime. All plans include access to our core learning features.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {pricingPlans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`relative p-6 rounded-2xl transition-all hover:scale-[1.02] ${
+                  plan.popular
+                    ? theme === 'dark'
+                      ? 'bg-gradient-to-b from-emerald-900/50 to-slate-800 border-2 border-emerald-500'
+                      : 'bg-gradient-to-b from-emerald-50 to-white border-2 border-emerald-500 shadow-xl'
+                    : theme === 'dark'
+                      ? 'bg-slate-800/50 border border-slate-700'
+                      : 'bg-white border border-slate-200 shadow-sm'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      MOST POPULAR
+                    </span>
+                  </div>
+                )}
+
+                <div className="text-center mb-6">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4 ${
+                    plan.popular
+                      ? 'bg-emerald-500 text-white'
+                      : theme === 'dark' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    <plan.icon size={24} />
+                  </div>
+                  <h3 className={`text-xl font-bold mb-1 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                    {plan.name}
+                  </h3>
+                  <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {plan.description}
+                  </p>
+                </div>
+
+                <div className="text-center mb-6">
+                  <div className="flex items-baseline justify-center gap-1">
+                    {plan.price === 0 ? (
+                      <span className={`text-4xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                        Free
+                      </span>
+                    ) : (
+                      <>
+                        <span className={`text-4xl font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                          {plan.price}
+                        </span>
+                        <span className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {plan.currency}/{plan.period}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <Check size={16} className="text-emerald-500 flex-shrink-0" />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>
+                        {feature}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => plan.price === 0 ? navigate('/signup') : navigate('/subscribe')}
+                  className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                    plan.popular
+                      ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                      : theme === 'dark'
+                        ? 'bg-slate-700 hover:bg-slate-600 text-white'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-900'
+                  }`}
+                >
+                  {plan.cta}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <p className={`text-center mt-8 text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+            💳 Pay with bank transfer (CBE, Awash, Telebirr) • Cancel anytime
+          </p>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="relative z-10 px-6 py-20">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${
+              theme === 'dark' ? 'text-white' : 'text-slate-900'
+            }`}>
+              How It Works
+            </h2>
+            <p className={`max-w-2xl mx-auto ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+              Start learning in just 3 simple steps
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { step: 1, title: 'Create Account', desc: 'Sign up for free in seconds', icon: Users },
+              { step: 2, title: 'Choose Language', desc: 'Pick from 5 Ethiopian languages', icon: Globe },
+              { step: 3, title: 'Start Learning', desc: 'Complete fun, bite-sized lessons', icon: BookOpen }
+            ].map((item) => (
+              <div key={item.step} className="text-center">
+                <div className={`relative w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                  theme === 'dark' ? 'bg-emerald-500/20' : 'bg-emerald-100'
+                }`}>
+                  <item.icon size={28} className="text-emerald-500" />
+                  <span className={`absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                    theme === 'dark' ? 'bg-slate-700 text-white' : 'bg-white text-slate-900 shadow-md'
+                  }`}>
+                    {item.step}
+                  </span>
+                </div>
+                <h3 className={`font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  {item.title}
+                </h3>
+                <p className={`text-sm ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {item.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className={`relative z-10 px-6 py-16 ${
         theme === 'dark' ? 'bg-gradient-to-r from-emerald-900/30 to-slate-900/30' : 'bg-gradient-to-r from-emerald-50 to-slate-50'
@@ -378,7 +590,7 @@ function Welcome() {
             onClick={() => navigate('/signup')}
             className="group inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02]"
           >
-            Get Started  It's Free
+            Get Started — It's Free
             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </button>
           <p className={`mt-4 text-xs ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -393,13 +605,19 @@ function Welcome() {
       }`}>
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ፖ</span>
-            </div>
-            <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Adewe</span>
+            {branding.logo_url ? (
+              <img src={branding.logo_url} alt={branding.site_name} className="w-8 h-8 rounded-lg object-cover" />
+            ) : (
+              <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">ፖ</span>
+              </div>
+            )}
+            <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+              {branding.site_name || 'Adewe'}
+            </span>
           </div>
           <p className={`text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-500'}`}>
-            © 2024 Adewe. Made with ❤️ for Ethiopian languages.
+            {branding.copyright || '© 2024 Adewe. Made with ❤️ for Ethiopian languages.'}
           </p>
         </div>
       </footer>
