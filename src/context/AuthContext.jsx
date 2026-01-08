@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, hasValidCredentials } from '../lib/supabase'
+import useStore from '../store/useStore'
 
 const AuthContext = createContext({})
 
@@ -18,6 +19,7 @@ export function AuthProvider({ children }) {
         const demoProfile = JSON.parse(savedProfile)
         setUser({ id: demoProfile.id, email: demoProfile.email })
         setProfile(demoProfile)
+        useStore.getState().populateStore(demoProfile)
       }
       setLoading(false)
       return
@@ -61,6 +63,7 @@ export function AuthProvider({ children }) {
       return
     }
     try {
+      // Fetch basic profile first to avoid join errors if schema is out of sync
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -68,18 +71,36 @@ export function AuthProvider({ children }) {
         .single()
 
       if (error) {
-        // PGRST116 = no rows found - profile might not exist yet
         if (error.code === 'PGRST116') {
-          console.log('Profile not found, user may need to complete signup')
+          console.log('Profile not found')
         } else {
           console.error('Error fetching profile:', error)
         }
         setProfile(null)
       } else {
+        // Try to fetch subscription separately
+        try {
+          const { data: subData } = await supabase
+            .from('user_subscriptions')
+            .select('*, tier:subscription_tiers (*)')
+            .eq('user_id', userId)
+            .limit(1)
+
+          if (subData && subData.length > 0) {
+            data.user_subscriptions = subData
+          } else {
+            data.user_subscriptions = []
+          }
+        } catch (subErr) {
+          console.warn('Could not fetch subscriptions (likely table missing):', subErr)
+          data.user_subscriptions = []
+        }
+
         setProfile(data)
+        useStore.getState().populateStore(data)
       }
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Fatal error in fetchProfile:', error)
       setProfile(null)
     } finally {
       setLoading(false)
@@ -88,6 +109,14 @@ export function AuthProvider({ children }) {
 
   const signUp = async (email, password, username, phone = '', nativeLanguage = '', learningLanguage = '') => {
     if (!supabase) throw new Error('Supabase not configured')
+
+    // Validation: Prevent same language for both native and learning
+    // This protects against corrupted localStorage or direct API calls
+    let validatedLearning = learningLanguage
+    if (learningLanguage && learningLanguage === nativeLanguage) {
+      console.warn('SignUp: learning_language equals native_language, clearing learning_language')
+      validatedLearning = '' // Reset - user will need to select in /select-language
+    }
 
     // Get the current site URL for email redirect
     const siteUrl = window.location.origin
@@ -98,9 +127,9 @@ export function AuthProvider({ children }) {
       options: {
         data: {
           username,
-          phone,
+          phone_number: phone,
           native_language: nativeLanguage,
-          learning_language: learningLanguage
+          learning_language: validatedLearning
         },
         emailRedirectTo: `${siteUrl}/login`,
       },
@@ -110,6 +139,45 @@ export function AuthProvider({ children }) {
 
     // Create profile - the trigger will handle this, but we can also try manually
     // Profile creation is handled by the database trigger on_auth_user_created
+
+    // Create profile - the trigger will handle this, but we force update to ensure languages are saved
+    if (data?.user) {
+      // Small delay to ensure trigger has fired (though usually synchronous)
+      // and then update the profile with selected languages
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            username,
+            native_language: nativeLanguage,
+            learning_language: validatedLearning,
+            phone: phone
+          })
+          .eq('id', data.user.id)
+
+        if (profileError) {
+          console.error('Manual profile update failed:', profileError)
+          // Fallback: If update failed (maybe trigger didn't fire), try upsert
+          if (profileError.code === 'PGRST116' || profileError.details?.includes('0 rows')) {
+            await supabase.from('profiles').upsert({
+              id: data.user.id,
+              email,
+              username,
+              native_language: nativeLanguage,
+              learning_language: validatedLearning,
+              phone: phone,
+              xp: 0,
+              streak: 0,
+              hearts: 5,
+              gems: 0,
+              role: 'user'
+            })
+          }
+        }
+      } catch (err) {
+        console.error('Profile sync error:', err)
+      }
+    }
 
     return data
   }
@@ -145,6 +213,7 @@ export function AuthProvider({ children }) {
           progress: {}
         }
         setProfile(demoProfile)
+        useStore.getState().populateStore(demoProfile)
         localStorage.setItem('demo_profile', JSON.stringify(demoProfile))
       }
       return { user: { email }, data: { user: { email } }, error: null }

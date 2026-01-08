@@ -4,8 +4,8 @@ import {
   BookOpen, FileQuestion, Volume2, Save, X, Mic, CheckCircle, XCircle, Gem
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { availableLanguages, getFlag } from '../../data/languageFlags'
-import { getAllUnits } from '../../data/sectionsData'
+import { getFlag, languageFlags } from '../../data/languageFlags'
+import { getAllUnits, unitTopics } from '../../data/sectionsData'
 
 // Simple Modal Component
 function Modal({ isOpen, onClose, title, children }) {
@@ -60,6 +60,26 @@ function ContentTab() {
   const [selectedLanguage, setSelectedLanguage] = useState(null)
   const [expandedLanguages, setExpandedLanguages] = useState({})
   const [toast, setToast] = useState(null)
+  const [selectedSectionForUnits, setSelectedSectionForUnits] = useState(null)
+  const [showUnitsModal, setShowUnitsModal] = useState(false)
+  const [showLessonModal, setShowLessonModal] = useState(false)
+  const [selectedUnitForDetails, setSelectedUnitForDetails] = useState(null)
+  const [showUnitDetailsModal, setShowUnitDetailsModal] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [confirmText, setConfirmText] = useState('')
+
+  const normalizeLanguageCode = (code) => {
+    if (!code) return ''
+    const mapping = {
+      am: 'amharic', amharic: 'amharic',
+      ti: 'tigrinya', tigrinya: 'tigrinya',
+      om: 'oromo', oromo: 'oromo',
+      so: 'somali', somali: 'somali',
+      gez: 'geez', geez: 'geez',
+      en: 'english', english: 'english'
+    }
+    return mapping[code.toLowerCase()] || code.toLowerCase()
+  }
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
@@ -77,8 +97,8 @@ function ContentTab() {
         .select('*')
         .order('sort_order')
 
-      if (langError) {
-        setLanguages(availableLanguages.slice(0, 5).map((l, i) => ({
+      if (langError || !langData || langData.length === 0) {
+        setLanguages(availableLanguages.map((l, i) => ({
           id: l.code,
           code: l.code,
           name: l.name,
@@ -90,7 +110,31 @@ function ContentTab() {
           sort_order: i
         })))
       } else {
-        setLanguages(langData || [])
+        // Ensure no duplicates by code and filter out short codes if full names exist
+        const uniqueLangs = []
+        const seenNames = new Set()
+        const fullNames = ['amharic', 'tigrinya', 'oromo', 'somali', 'geez', 'english']
+
+        // Priority to full names
+        langData.forEach(l => {
+          if (fullNames.includes(l.code)) {
+            uniqueLangs.push(l)
+            seenNames.add(l.code)
+          }
+        })
+
+        // Then add others if not already seen (and not a short-code version of what we have)
+        const shortToFull = { am: 'amharic', ti: 'tigrinya', om: 'oromo', so: 'somali', gez: 'geez', en: 'english' }
+        langData.forEach(l => {
+          if (!fullNames.includes(l.code) && !seenNames.has(l.code)) {
+            const mapped = shortToFull[l.code]
+            if (!mapped || !seenNames.has(mapped)) {
+              uniqueLangs.push(l)
+              seenNames.add(l.code)
+            }
+          }
+        })
+        setLanguages(uniqueLangs)
       }
 
       const { data: lessonData } = await supabase
@@ -118,55 +162,291 @@ function ContentTab() {
     }
   }
 
-
-  // Populate with mock data from sectionsData if Supabase fails or is empty
-  // User requested "10 sections and 15 units", so we enforce this structure via mock data if real data is missing.
-  useEffect(() => {
-    if (lessons.length === 0 && !loading) {
-      // Flatten all units from all languages
-      const allMockUnits = []
-      const allMockLessons = []
-
-      // Use a few dummy languages to demonstrate the structure
-      const demoLangs = ['english-amharic', 'english-tigrinya']
-
-      demoLangs.forEach(langPair => {
-        const [native, learning] = langPair.split('-')
-        const units = getAllUnits(native, learning)
-
-        units.forEach(unit => {
-          allMockUnits.push(unit)
-          unit.lessons.forEach(lesson => {
-            allMockLessons.push({
-              ...lesson,
-              language: learning,
-              level: unit.sectionId,
-              xp_reward: 10,
-              is_published: true
-            })
-          })
-        })
-      })
-
-      setLessons(allMockLessons)
-    }
-  }, [loading, lessons.length])
-
-  const handleSaveExercise = (e) => {
+  const handleSaveUnit = async (e) => {
     e.preventDefault()
     const formData = new FormData(e.target)
-    const newExercise = {
-      id: `custom-${Date.now()}`,
+    const unitData = {
+      language_code: selectedSectionForUnits.lang,
+      title: formData.get('title'),
+      description: formData.get('description'),
+      sort_order: parseInt(formData.get('sort_order')) || 0,
+      is_published: true,
+      updated_at: new Date().toISOString()
+    }
+
+    try {
+      if (editingItem && editingItem.type === 'unit') {
+        const { error } = await supabase.from('units').update(unitData).eq('id', editingItem.id)
+        if (error) throw error
+        setUnits(prev => prev.map(u => u.id === editingItem.id ? { ...u, ...unitData } : u))
+        showToast('Unit updated successfully!', 'success')
+      } else {
+        const { data, error } = await supabase.from('units').insert([unitData]).select().single()
+        if (error) throw error
+        setUnits(prev => [...prev, data])
+        showToast('Unit added successfully!', 'success')
+      }
+      setShowModal(null)
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Error saving unit:', err)
+      showToast('Error saving unit', 'error')
+    }
+  }
+
+  const handleDeleteUnit = async (unitId) => {
+    const unit = units.find(u => u.id === unitId)
+    setDeleteConfirm({
+      id: unitId,
+      type: 'unit',
+      name: unit?.title || `Unit ${unit?.sort_order}`,
+      onConfirm: async () => {
+        const { error } = await supabase.from('units').delete().eq('id', unitId)
+        if (error) throw error
+        setUnits(prev => prev.filter(u => u.id !== unitId))
+        showToast('Unit deleted successfully!', 'success')
+      }
+    })
+    setConfirmText('')
+  }
+
+  const handleSaveLesson = async (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    const lessonData = {
+      language: formData.get('language'),
+      title: formData.get('title'),
+      description: formData.get('description'),
+      level: parseInt(formData.get('level')) || 1,
+      unit_id: formData.get('unit_id') === 'null' ? null : formData.get('unit_id'),
+      is_published: formData.get('is_published') === 'on',
+      xp_reward: parseInt(formData.get('xp_reward')) || 10,
+      updated_at: new Date().toISOString()
+    }
+
+    try {
+      if (editingItem && editingItem.type === 'lesson') {
+        const { error } = await supabase.from('lessons').update(lessonData).eq('id', editingItem.id)
+        if (error) throw error
+        setLessons(prev => prev.map(l => l.id === editingItem.id ? { ...l, ...lessonData } : l))
+        showToast('Lesson updated successfully!', 'success')
+      } else {
+        const { data, error } = await supabase.from('lessons').insert([lessonData]).select().single()
+        if (error) throw error
+        setLessons(prev => [...prev, data])
+        showToast('Lesson added successfully!', 'success')
+      }
+      setShowModal(null)
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Error saving lesson:', err)
+      showToast('Error saving lesson', 'error')
+    }
+  }
+
+  const handleDeleteLesson = async (lessonId) => {
+    const lesson = lessons.find(l => l.id === lessonId)
+    setDeleteConfirm({
+      id: lessonId,
+      type: 'lesson',
+      name: lesson?.title || 'this lesson',
+      onConfirm: async () => {
+        const { error } = await supabase.from('lessons').delete().eq('id', lessonId)
+        if (error) throw error
+        setLessons(prev => prev.filter(l => l.id !== lessonId))
+        showToast('Lesson deleted successfully!', 'success')
+      }
+    })
+    setConfirmText('')
+  }
+
+  const handleShowUnitDetails = (lang, unitIdx) => {
+    // Find the real unit in DB if it exists
+    const dbUnit = units.find(u =>
+      normalizeLanguageCode(u.language_code) === normalizeLanguageCode(lang) &&
+      u.sort_order === unitIdx
+    )
+
+    // For mock/placeholder, we'll just show what we have
+    setSelectedUnitForDetails({
+      lang,
+      unitIdx,
+      dbUnit,
+      lessons: lessons.filter(l =>
+        (normalizeLanguageCode(l.language) === normalizeLanguageCode(lang) && l.unitId === unitIdx) || // mock lessons
+        (dbUnit && l.unit_id === dbUnit.id) // real lessons
+      )
+    })
+    setShowUnitDetailsModal(true)
+  }
+
+
+  // User requested "at least 500 lessons per language".
+  // We enforce this by independently mocking lessons for any language that has 0 real lessons in Supabase.
+  useEffect(() => {
+    if (!loading && languages.length > 0) {
+      const languagesWithNoLessons = languages.filter(lang =>
+        !lessons.some(l => l.language === lang.code)
+      )
+
+      if (languagesWithNoLessons.length > 0) {
+        let allNewMockLessons = []
+        const shortToFull = {
+          am: 'amharic', amharic: 'amharic',
+          ti: 'tigrinya', tigrinya: 'tigrinya',
+          om: 'oromo', oromo: 'oromo',
+          so: 'somali', somali: 'somali',
+          gez: 'geez', geez: 'geez',
+          en: 'english', english: 'english'
+        }
+
+        languagesWithNoLessons.forEach(lang => {
+          const learning = shortToFull[lang.code.toLowerCase()] || lang.code.toLowerCase()
+          // For English learners, default native to Amharic. For others, English.
+          let native = learning === 'english' ? 'amharic' : 'english'
+
+          let units = getAllUnits(native, learning)
+
+          // Fallback if the first choice has no content
+          if (!units || units.length === 0) {
+            const possibleNatives = ['english', 'amharic', 'tigrinya']
+            for (const pNative of possibleNatives) {
+              if (pNative === learning) continue
+              const pUnits = getAllUnits(pNative, learning)
+              if (pUnits && pUnits.length > 0) {
+                units = pUnits
+                native = pNative
+                break
+              }
+            }
+          }
+
+          if (units && units.length > 0) {
+            units.forEach(unit => {
+              unit.lessons.forEach(lesson => {
+                allNewMockLessons.push({
+                  ...lesson,
+                  language: lang.code, // Keep original code for state consistency
+                  level: unit.sectionId,
+                  xp_reward: 10,
+                  is_published: true
+                })
+              })
+            })
+          }
+        })
+
+        if (allNewMockLessons.length > 0) {
+          setLessons(prev => [...prev, ...allNewMockLessons])
+        }
+      }
+    }
+  }, [loading, languages.length, lessons.length])
+
+  const handleSaveExercise = async (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    const exerciseData = {
       type: formData.get('type'),
       question: formData.get('question'),
       correct_answer: formData.get('answer'),
       options: formData.get('options')?.split(',').map(s => s.trim()) || [],
-      created_at: new Date().toISOString()
+      updated_at: new Date().toISOString()
     }
 
-    setExercises([newExercise, ...exercises])
-    setShowModal(null)
-    showToast('Exercise created successfully!', 'success')
+    try {
+      if (editingItem && !editingItem.id.toString().startsWith('custom-')) {
+        const { error } = await supabase.from('exercises').update(exerciseData).eq('id', editingItem.id)
+        if (error) throw error
+        setExercises(prev => prev.map(ex => ex.id === editingItem.id ? { ...ex, ...exerciseData } : ex))
+        showToast('Exercise updated successfully!', 'success')
+      } else {
+        // For custom/mock or new exercises
+        const newEx = {
+          id: editingItem?.id || `custom-${Date.now()}`,
+          ...exerciseData,
+          created_at: editingItem?.created_at || new Date().toISOString()
+        }
+        if (editingItem) {
+          setExercises(prev => prev.map(ex => ex.id === editingItem.id ? newEx : ex))
+          showToast('Mock exercise updated!', 'success')
+        } else {
+          setExercises([newEx, ...exercises])
+          showToast('Exercise created successfully!', 'success')
+        }
+      }
+      setShowModal(null)
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Error saving exercise:', err)
+      showToast('Error saving exercise', 'error')
+    }
+  }
+
+  const handleDeleteExercise = async (exId) => {
+    const exercise = exercises.find(ex => ex.id === exId)
+    setDeleteConfirm({
+      id: exId,
+      type: 'exercise',
+      name: (exercise?.question?.substring(0, 20) + (exercise?.question?.length > 20 ? '...' : '')) || 'this exercise',
+      onConfirm: async () => {
+        if (!exId.toString().startsWith('custom-')) {
+          const { error } = await supabase.from('exercises').delete().eq('id', exId)
+          if (error) throw error
+        }
+        setExercises(prev => prev.filter(ex => ex.id !== exId))
+        showToast('Exercise deleted successfully!', 'success')
+      }
+    })
+    setConfirmText('')
+  }
+
+  const handleDeleteLanguage = async (langId) => {
+    const lang = languages.find(l => l.id === langId)
+    setDeleteConfirm({
+      id: langId,
+      type: 'language',
+      name: lang?.name || 'this language',
+      onConfirm: async () => {
+        const { error } = await supabase.from('languages').delete().eq('id', langId)
+        if (error) throw error
+        setLanguages(prev => prev.filter(l => l.id !== langId))
+        showToast('Language deleted successfully!', 'success')
+      }
+    })
+    setConfirmText('')
+  }
+
+  const handleSaveLanguage = async (e) => {
+    e.preventDefault()
+    const formData = new FormData(e.target)
+    const langData = {
+      code: formData.get('code'),
+      name: formData.get('name'),
+      native_name: formData.get('native_name'),
+      flag: formData.get('flag') || '🏳️',
+      script: formData.get('script') || 'latin',
+      is_active: true
+    }
+
+    try {
+      if (editingItem) {
+        const { error } = await supabase.from('languages').update(langData).eq('id', editingItem.id)
+        if (error) throw error
+        setLanguages(prev => prev.map(l => l.id === editingItem.id ? { ...l, ...langData } : l))
+        showToast('Language updated successfully!', 'success')
+      } else {
+        const { data, error } = await supabase.from('languages').insert([langData]).select().single()
+        if (error) throw error
+        setLanguages(prev => [...prev, data])
+        showToast('Language added successfully!', 'success')
+      }
+      setShowModal(null)
+      setEditingItem(null)
+    } catch (err) {
+      console.error('Error saving language:', err)
+      showToast('Error saving language', 'error')
+    }
   }
 
 
@@ -176,12 +456,16 @@ function ContentTab() {
     { id: 'exercises', label: 'Exercises', icon: FileQuestion, count: exercises.length, color: 'text-[#1cb0f6]' },
   ]
 
-  const lessonsByLanguage = lessons.reduce((acc, lesson) => {
-    const lang = lesson.language || 'unknown'
-    if (!acc[lang]) acc[lang] = {}
-    const level = lesson.level || 1
-    if (!acc[lang][level]) acc[lang][level] = []
-    acc[lang][level].push(lesson)
+  const lessonsByLanguage = languages.reduce((acc, lang) => {
+    acc[lang.code] = lessons.reduce((levelAcc, lesson) => {
+      const lessonLang = normalizeLanguageCode(lesson.language)
+      if (lessonLang !== normalizeLanguageCode(lang.code)) return levelAcc
+
+      const level = lesson.level || 1
+      if (!levelAcc[level]) levelAcc[level] = []
+      levelAcc[level].push(lesson)
+      return levelAcc
+    }, {})
     return acc
   }, {})
 
@@ -192,7 +476,7 @@ function ContentTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -222,6 +506,79 @@ function ContentTab() {
           </button>
         ))}
       </div>
+
+      {/* Manage Units Modal */}
+      <Modal
+        isOpen={showUnitsModal}
+        onClose={() => setShowUnitsModal(false)}
+        title={`Manage Section ${selectedSectionForUnits?.sectionId}: ${selectedSectionForUnits?.title}`}
+      >
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          {Array.from({ length: 15 }).map((_, i) => {
+            const unitOrder = (selectedSectionForUnits?.sectionId - 1) * 15 + i + 1
+            const unit = units.find(u =>
+              normalizeLanguageCode(u.language_code) === normalizeLanguageCode(selectedSectionForUnits?.lang) &&
+              u.sort_order === unitOrder
+            )
+
+            return (
+              <div key={unit?.id || `slot-${unitOrder}`} className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all group ${unit ? 'bg-bg-alt border-border-main hover:border-brand-primary/30' : 'bg-bg-card border-dashed border-border-main opacity-60'}`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm border-2 ${unit ? 'bg-bg-card border-border-main' : 'bg-bg-alt border-border-main'}`}>
+                    {unitOrder}
+                  </div>
+                  <div>
+                    <h4 className={`font-black text-sm ${unit ? 'text-text-main' : 'text-text-alt'}`}>
+                      {unit?.title || unitTopics[selectedSectionForUnits?.sectionId - 1]?.[i] || 'New Unit'}
+                    </h4>
+                    <p className="text-[10px] font-bold text-text-alt uppercase tracking-widest">
+                      {unit ? (
+                        `${lessons.filter(l => l.unit_id === unit.id).length} Lessons • ${unit.is_published ? 'Enabled' : 'Disabled'}`
+                      ) : (
+                        `5 lessons available • Draft`
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  {unit ? (
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => { setEditingItem({ ...unit, type: 'unit' }); setShowModal('unit') }}
+                        className="p-2 text-text-alt hover:text-brand-primary hover:bg-white rounded-lg transition-all"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUnit(unit.id)}
+                        className="p-2 text-text-alt hover:text-red-500 hover:bg-white rounded-lg transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingItem({
+                          language_code: selectedSectionForUnits.lang,
+                          sort_order: unitOrder
+                        });
+                        setShowModal('unit')
+                      }}
+                      className="px-3 py-1.5 bg-brand-primary/10 text-brand-primary rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-brand-primary/20 transition-all"
+                    >
+                      + Create
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div className="mt-6">
+          <button onClick={() => setShowUnitsModal(false)} className="w-full duo-btn duo-btn-white text-xs uppercase tracking-widest">Done</button>
+        </div>
+      </Modal>
 
       {/* Languages Section */}
       {activeSection === 'languages' && (
@@ -258,6 +615,7 @@ function ContentTab() {
                       <Edit size={18} />
                     </button>
                     <button
+                      onClick={() => handleDeleteLanguage(lang.id)}
                       className="p-2 text-text-alt hover:text-[#ff4b4b] hover:bg-[#fee2e2] rounded-xl transition-all"
                     >
                       <Trash2 size={18} />
@@ -293,80 +651,73 @@ function ContentTab() {
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-8">
             {Object.entries(lessonsByLanguage).map(([lang, levels]) => (
               <div key={lang} className="bg-bg-card dark:bg-[#1a2c35] rounded-3xl border-2 border-border-main dark:border-[#37464f] overflow-hidden shadow-sm">
                 <button
                   onClick={() => toggleLanguageExpand(lang)}
-                  className="w-full p-6 flex items-center justify-between hover:bg-[#f7f7f7] dark:hover:bg-[#37464f]/30 transition-all"
+                  className="w-full p-6 flex items-center justify-between hover:bg-[#f7f7f7] dark:hover:bg-[#37464f]/30 transition-all border-b-2 border-border-main"
                 >
                   <div className="flex items-center gap-4">
                     <span className="text-4xl">{getFlag(lang)}</span>
                     <div className="text-left">
                       <h3 className="text-text-main font-black text-xl uppercase tracking-tight">{lang}</h3>
                       <p className="text-text-alt font-black uppercase tracking-widest text-[10px] mt-1">
-                        {Object.values(levels).flat().length} LESSONS • {Object.keys(levels).length} LEVELS
+                        10 SECTIONS • 150 UNITS • {Object.values(levels).flat().length} LESSONS
                       </p>
                     </div>
                   </div>
-                  {expandedLanguages[lang] ? (
-                    <ChevronDown size={24} className="text-text-alt" />
-                  ) : (
-                    <ChevronRight size={24} className="text-text-alt" />
-                  )}
+                  {expandedLanguages[lang] ? <ChevronDown size={24} className="text-text-alt" /> : <ChevronRight size={24} className="text-text-alt" />}
                 </button>
 
                 {expandedLanguages[lang] && (
-                  <div className="border-t-2 border-border-main dark:border-[#37464f]">
-                    {Object.entries(levels)
-                      .sort(([a], [b]) => Number(a) - Number(b))
-                      .map(([level, levelLessons]) => (
-                        <div key={level} className="border-b-2 border-border-main last:border-b-0">
-                          <div className="px-6 py-3 bg-bg-alt flex items-center gap-3">
-                            <Layers size={16} className="text-[#ce82ff]" />
-                            <span className="text-[#ce82ff] font-black text-xs uppercase tracking-widest">Level {level}</span>
-                            <span className="text-text-alt font-black text-[10px] uppercase tracking-widest">({levelLessons.length} LESSONS)</span>
+                  <div className="p-4 space-y-4 bg-bg-alt/30">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(sectionId => {
+                      const sectionLessons = Object.values(levels[sectionId] || []).flat()
+                      const sectionTitle = ['Foundations', 'Explore', 'Expand', 'Communicate', 'Express', 'Interact', 'Master', 'Advance', 'Specialize', 'Perfect'][sectionId - 1]
+                      return (
+                        <div key={sectionId} className="bg-bg-card dark:bg-[#1a2c35] rounded-2xl border-2 border-border-main overflow-hidden">
+                          <div className="px-6 py-4 flex items-center justify-between border-b-2 border-border-main bg-bg-alt/50">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center font-black text-xs">{sectionId}</div>
+                              <div>
+                                <h4 className="text-text-main font-black text-sm uppercase tracking-wide">{sectionTitle}</h4>
+                                <p className="text-text-alt font-bold text-[10px] tracking-widest uppercase">{sectionLessons.length} Lessons Available</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSelectedSectionForUnits({ lang, sectionId, title: sectionTitle })
+                                setShowUnitsModal(true)
+                              }}
+                              className="text-brand-primary font-black text-[10px] uppercase hover:underline"
+                            >
+                              Manage Units
+                            </button>
                           </div>
 
-                          <div className="divide-y-2 divide-border-main dark:divide-[#37464f]">
-                            {levelLessons.map(lesson => (
-                              <div key={lesson.id} className="px-6 py-4 flex flex-col md:flex-row md:items-center justify-between hover:bg-[#f7f7f7]/50 dark:hover:bg-[#37464f]/20 transition-all gap-4">
-                                <div className="flex items-center gap-4 w-full md:w-auto">
-                                  <div className="w-12 h-12 bg-[#ddf4ff] dark:bg-[#1cb0f6]/20 rounded-2xl flex items-center justify-center border-2 border-[#84d8ff] dark:border-[#1cb0f6]/30 shadow-sm flex-shrink-0">
-                                    <BookOpen size={24} className="text-[#1cb0f6]" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-text-main font-black text-base truncate">{lesson.title}</p>
-                                    <p className="text-text-alt font-bold text-sm line-clamp-1">{lesson.description}</p>
-                                  </div>
+                          <div className="p-2 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                            {Array.from({ length: 15 }).map((_, i) => {
+                              const unitId = (sectionId - 1) * 15 + i + 1
+                              const dbUnit = units.find(u =>
+                                normalizeLanguageCode(u.language_code) === normalizeLanguageCode(lang) &&
+                                u.sort_order === unitId
+                              )
+                              const hasContent = sectionLessons.some(l => l.unitId === unitId) || !!dbUnit
+                              return (
+                                <div key={unitId}
+                                  onClick={() => handleShowUnitDetails(lang, unitId)}
+                                  className={`p-3 rounded-xl border-2 flex flex-col items-center justify-center text-center gap-1 transition-all cursor-pointer hover:border-brand-primary/50 shadow-sm hover:shadow-md ${hasContent ? 'bg-brand-primary/5 border-brand-primary/20' : 'bg-bg-alt/50 border-dashed border-border-main'}`}
+                                >
+                                  <span className="text-[10px] font-black text-text-alt">UNIT {unitId}</span>
+                                  <div className={`w-2 h-2 rounded-full ${hasContent ? 'bg-brand-primary' : 'bg-border-main'}`} />
                                 </div>
-                                <div className="flex items-center justify-between md:justify-end gap-4 md:gap-6 w-full md:w-auto pl-16 md:pl-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <Gem size={18} className="text-[#1cb0f6]" fill="#1cb0f6" />
-                                    <span className="text-[#1cb0f6] font-black text-sm">+{lesson.xp_reward} XP</span>
-                                  </div>
-                                  <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${lesson.is_published !== false ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/20' : 'bg-[#ffc800]/10 text-[#ffc800] border-[#ffc800]/20'}`}>
-                                    {lesson.is_published !== false ? 'Published' : 'Draft'}
-                                  </span>
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => { setEditingItem(lesson); setShowModal('lesson') }}
-                                      className="p-2 text-text-alt hover:text-[#1cb0f6] hover:bg-[#ddf4ff] rounded-xl transition-all"
-                                    >
-                                      <Edit size={18} />
-                                    </button>
-                                    <button
-                                      className="p-2 text-text-alt hover:text-[#ff4b4b] hover:bg-[#fee2e2] rounded-xl transition-all"
-                                    >
-                                      <Trash2 size={18} />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         </div>
-                      ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -393,7 +744,7 @@ function ContentTab() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {exercises.map(exercise => (
-              <div key={exercise.id} className="bg-bg-card dark:bg-[#1a2c35] rounded-3xl border-2 border-border-main dark:border-[#37464f] p-6 hover:border-[#1cb0f6]/30 transition-all shadow-sm group">
+              <div key={exercise.id} className="bg-bg-card dark:bg-[#1a2c35] rounded-3xl border-2 border-border-main dark:border-[#37464f] p-6 hover:border-brand-primary/30 transition-all shadow-sm group">
                 <div className="flex items-start justify-between mb-4">
                   <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${exercise.type === 'translation' ? 'bg-[#ddf4ff] text-[#1cb0f6] border-[#84d8ff]' :
                     exercise.type === 'multiple_choice' ? 'bg-[#f3e8ff] text-[#ce82ff] border-[#d8b4fe]' :
@@ -403,31 +754,232 @@ function ContentTab() {
                     {exercise.type?.replace('_', ' ')}
                   </span>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => { setEditingItem(exercise); setShowModal('exercise') }}
-                      className="p-2 text-text-alt hover:text-[#1cb0f6] hover:bg-[#ddf4ff] rounded-xl transition-all"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      className="p-2 text-text-alt hover:text-[#ff4b4b] hover:bg-[#fee2e2] rounded-xl transition-all"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <button onClick={() => { setEditingItem(exercise); setShowModal('exercise') }} className="p-2 text-text-alt hover:text-brand-primary hover:bg-bg-alt rounded-xl transition-all"><Edit size={18} /></button>
+                    <button onClick={() => handleDeleteExercise(exercise.id)} className="p-2 text-text-alt hover:text-red-500 hover:bg-bg-alt rounded-xl transition-all"><Trash2 size={18} /></button>
                   </div>
                 </div>
-                <p className="text-text-main font-black text-lg mb-3 leading-tight group-hover:text-[#1cb0f6] transition-colors">{exercise.question}</p>
+                <p className="text-text-main font-black text-lg mb-3 leading-tight group-hover:text-brand-primary transition-colors">{exercise.question}</p>
                 <div className="bg-bg-alt p-4 rounded-2xl border-2 border-border-main">
                   <p className="text-text-alt font-black text-[10px] uppercase tracking-widest mb-1">Correct Answer</p>
                   <p className="text-brand-primary font-black">{exercise.correct_answer}</p>
                 </div>
-                {exercise.audio_url && (
-                  <div className="flex items-center gap-2 mt-4 text-[#1cb0f6] font-black text-xs uppercase tracking-widest">
-                    <Volume2 size={16} /> HAS AUDIO CONTENT
-                  </div>
-                )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modals at the end of return */}
+
+      {/* Language Modal */}
+      {showModal === 'language' && (
+        <Modal isOpen={true} onClose={() => { setShowModal(null); setEditingItem(null); }} title={editingItem ? 'Edit Language' : 'Add New Language'}>
+          <form onSubmit={handleSaveLanguage} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Code</label>
+                <input required name="code" defaultValue={editingItem?.code} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Name</label>
+                <input required name="name" defaultValue={editingItem?.name} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+              </div>
+            </div>
+            <div className="duo-btn-group flex gap-3 pt-4">
+              <button type="button" onClick={() => setShowModal(null)} className="flex-1 duo-btn duo-btn-white">CANCEL</button>
+              <button type="submit" className="flex-1 duo-btn duo-btn-blue">{editingItem ? 'UPDATE' : 'CREATE'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Lesson Modal */}
+      {showModal === 'lesson' && (
+        <Modal isOpen={true} onClose={() => { setShowModal(null); setEditingItem(null); }} title={editingItem?.type === 'lesson' ? 'Edit Lesson' : 'Add New Lesson'}>
+          <form onSubmit={handleSaveLesson} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Language</label>
+                <select required name="language" defaultValue={editingItem?.language || 'amharic'} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary">
+                  {languages.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Section / Level</label>
+                <input type="number" required name="level" defaultValue={editingItem?.level || 1} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Unit</label>
+              <select name="unit_id" defaultValue={editingItem?.unit_id || editingItem?.dbUnit?.id || 'null'} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary">
+                <option value="null">No specific unit</option>
+                {units.filter(u => normalizeLanguageCode(u.language_code) === normalizeLanguageCode(editingItem?.language || 'amharic')).map(u => <option key={u.id} value={u.id}>Unit {u.sort_order}: {u.title}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Title</label>
+              <input required name="title" defaultValue={editingItem?.title} placeholder="e.g. Basic Greetings" className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Description</label>
+              <textarea name="description" defaultValue={editingItem?.description} placeholder="Brief summary" className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary resize-none" rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">XP Reward</label>
+                <input type="number" name="xp_reward" defaultValue={editingItem?.xp_reward || 10} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+              </div>
+              <div className="flex items-center gap-3 pt-6">
+                <input type="checkbox" name="is_published" id="is_published_lesson" defaultChecked={editingItem?.is_published !== false} className="w-5 h-5 accent-brand-primary" />
+                <label htmlFor="is_published_lesson" className="text-xs font-black uppercase text-text-alt tracking-widest">Published</label>
+              </div>
+            </div>
+            <div className="duo-btn-group flex gap-3 pt-4">
+              <button type="button" onClick={() => setShowModal(null)} className="flex-1 duo-btn duo-btn-white">CANCEL</button>
+              <button type="submit" className="flex-1 duo-btn duo-btn-blue">{editingItem?.type === 'lesson' ? 'UPDATE' : 'CREATE'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Exercise Modal */}
+      {showModal === 'exercise' && (
+        <Modal isOpen={true} onClose={() => { setShowModal(null); setEditingItem(null); }} title={editingItem ? 'Edit Exercise' : 'Add New Exercise'}>
+          <form onSubmit={handleSaveExercise} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Type</label>
+              <select name="type" defaultValue={editingItem?.type || 'translation'} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary">
+                <option value="translation">Translation</option>
+                <option value="multiple_choice">Multiple Choice</option>
+                <option value="fill_blank">Fill in the Blank</option>
+                <option value="listening">Listening</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Question</label>
+              <textarea required name="question" defaultValue={editingItem?.question} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary resize-none" rows={2} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Answer</label>
+              <input required name="answer" defaultValue={editingItem?.correct_answer} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+            </div>
+            <div className="duo-btn-group flex gap-3 pt-4">
+              <button type="button" onClick={() => setShowModal(null)} className="flex-1 duo-btn duo-btn-white">CANCEL</button>
+              <button type="submit" className="flex-1 duo-btn duo-btn-blue">{editingItem ? 'UPDATE' : 'CREATE'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Unit Modal */}
+      {showModal === 'unit' && (
+        <Modal isOpen={true} onClose={() => { setShowModal(null); setEditingItem(null); }} title={editingItem ? 'Edit Unit' : 'Add New Unit'}>
+          <form onSubmit={handleSaveUnit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Title</label>
+              <input required name="title" defaultValue={editingItem?.title} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Sort Order</label>
+              <input type="number" required name="sort_order" defaultValue={editingItem?.sort_order || 1} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+            </div>
+            <div className="duo-btn-group flex gap-3 pt-4">
+              <button type="button" onClick={() => setShowModal(null)} className="flex-1 duo-btn duo-btn-white">CANCEL</button>
+              <button type="submit" className="flex-1 duo-btn duo-btn-blue">{editingItem ? 'UPDATE' : 'CREATE'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Unit Details Modal */}
+      <Modal isOpen={showUnitDetailsModal} onClose={() => setShowUnitDetailsModal(false)} title={selectedUnitForDetails?.dbUnit?.title || `Unit ${selectedUnitForDetails?.unitIdx}`}>
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          {selectedUnitForDetails?.lessons.map((lesson, i) => (
+            <div key={lesson.id} className="p-4 bg-bg-alt rounded-2xl border-2 border-border-main hover:border-brand-primary/30 transition-all group">
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="font-black text-text-main text-sm">{lesson.title}</h4>
+                <div className="flex gap-2">
+                  <button onClick={() => { setEditingItem({ ...lesson, type: 'lesson' }); setShowModal('lesson') }} className="p-1.5 text-text-alt hover:text-brand-primary hover:bg-white rounded-lg transition-all"><Edit size={14} /></button>
+                  <button onClick={() => handleDeleteLesson(lesson.id)} className="p-1.5 text-text-alt hover:text-red-500 hover:bg-white rounded-lg transition-all"><Trash2 size={14} /></button>
+                </div>
+              </div>
+              <p className="text-xs text-text-alt font-bold line-clamp-1">{lesson.description}</p>
+            </div>
+          ))}
+          {selectedUnitForDetails?.lessons.length === 0 && <div className="text-center py-10"><BookOpen size={48} className="mx-auto text-text-alt mb-3 opacity-20" /><p className="text-text-alt font-bold">No lessons yet</p></div>}
+        </div>
+        <div className="mt-6 flex gap-3">
+          <button onClick={() => setShowUnitDetailsModal(false)} className="flex-1 duo-btn duo-btn-white text-xs">CLOSE</button>
+          <button onClick={() => { setEditingItem({ language: selectedUnitForDetails?.lang, unit_id: selectedUnitForDetails?.dbUnit?.id || null, level: Math.floor((selectedUnitForDetails?.unitIdx - 1) / 15) + 1 }); setShowModal('lesson') }} className="flex-1 duo-btn duo-btn-green flex items-center justify-center gap-2 text-xs"><Plus size={18} /> ADD LESSON</button>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[110] backdrop-blur-md" style={{ margin: 0, padding: '1rem' }}>
+          <div className="bg-bg-card dark:bg-[#131f24] rounded-[32px] w-full max-w-md border-2 border-red-500/30 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b-2 border-border-main flex items-center justify-between">
+              <h3 className="text-xl font-black text-red-500 uppercase tracking-wide flex items-center gap-2">
+                <Trash2 size={24} /> DELETE ITEM
+              </h3>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="p-2 hover:bg-bg-alt rounded-lg text-text-alt hover:text-text-main"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-text-main font-bold">
+                You are about to permanently delete this {deleteConfirm.type}:
+              </p>
+              <div className="bg-red-500/10 p-4 rounded-2xl border-2 border-red-500/20">
+                <p className="font-black text-red-400">{deleteConfirm.name}</p>
+              </div>
+
+              <p className="text-text-alt text-sm">
+                This action cannot be undone. Type <span className="font-black text-red-500">{deleteConfirm.name}</span> to confirm:
+              </p>
+
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={`Type ${deleteConfirm.name} to confirm`}
+                className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-red-500 text-center uppercase tracking-widest"
+              />
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 duo-btn duo-btn-white"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={async () => {
+                    if (confirmText.toLowerCase() === deleteConfirm.name.toLowerCase()) {
+                      try {
+                        await deleteConfirm.onConfirm()
+                        setDeleteConfirm(null)
+                        setConfirmText('')
+                      } catch (err) {
+                        console.error('Delete failed:', err)
+                        showToast('Error performing deletion', 'error')
+                      }
+                    }
+                  }}
+                  disabled={confirmText.toLowerCase() !== deleteConfirm.name.toLowerCase()}
+                  className={`flex-1 py-3 rounded-2xl font-black uppercase tracking-widest transition-all ${confirmText.toLowerCase() === deleteConfirm.name.toLowerCase()
+                      ? 'bg-red-500 text-white hover:bg-red-600 shadow-[0_4px_0_0_#b91c1c]'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                >
+                  DELETE
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

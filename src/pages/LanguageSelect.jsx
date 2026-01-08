@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, Loader2, X } from 'lucide-react'
 import useStore from '../store/useStore'
 import { languages, getOtherLanguages } from '../data/languages'
 import { useAuth } from '../context/AuthContext'
+import { triggerMilestone } from '../lib/communityTriggers'
 import { useBranding } from '../context/BrandingContext'
 
 function LanguageSelect() {
@@ -40,13 +41,42 @@ function LanguageSelect() {
       if (user) {
         setSaving(true)
         try {
+          // Prepare language progress update
+          const currentProgress = profile?.language_progress || []
+          const encodingLanguage = selectedLearning
+
+          let updatedProgress = [...currentProgress]
+          const existingEntry = updatedProgress.find(l => l.code === encodingLanguage)
+
+          if (!existingEntry) {
+            updatedProgress.push({
+              code: encodingLanguage,
+              progress: 0,
+              currentSection: 0,
+              lastAccessed: new Date().toISOString()
+            })
+          } else {
+            // Update last accessed
+            updatedProgress = updatedProgress.map(l =>
+              l.code === encodingLanguage
+                ? { ...l, lastAccessed: new Date().toISOString() }
+                : l
+            )
+          }
+
           await updateProfile({
             native_language: selectedNative,
-            learning_language: selectedLearning
+            learning_language: selectedLearning,
+            language_progress: updatedProgress
           })
+
+          // Trigger milestone
+          triggerMilestone(user.id, 'new_language', { language: selectedLearning })
+
           navigate('/learn')
         } catch (error) {
           console.error('Failed to save language preferences:', error)
+          alert('Error saving language: ' + error.message)
           navigate('/learn')
         } finally {
           setSaving(false)

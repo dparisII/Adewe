@@ -19,6 +19,9 @@ import Quests from './pages/Quests'
 import Admin from './pages/Admin'
 import Subscribe from './pages/Subscribe'
 import LegalPage from './pages/LegalPage'
+import Community from './pages/Community'
+import AnalyticsTracker from './components/AnalyticsTracker'
+import NotFound from './pages/NotFound'
 
 // Error boundary to catch rendering errors
 class ErrorBoundary extends Component {
@@ -73,7 +76,7 @@ function ProtectedRoute({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-white dark:bg-[#131f24] flex flex-col items-center justify-center gap-4 font-['Nunito']">
-        <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-12 h-12 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin" />
         {showTimeout && (
           <div className="text-center animate-fade-in">
             <p className="text-[#afafaf] font-bold text-sm">Taking longer than expected...</p>
@@ -207,6 +210,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/community"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Community />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/subscribe"
         element={
           <ProtectedRoute>
@@ -216,8 +229,8 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      {/* Catch all redirect */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Catch all 404 */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }
@@ -237,6 +250,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
+        <AnalyticsTracker />
         <AuthProvider>
           <BrandingProvider>
             <AppRoutes />

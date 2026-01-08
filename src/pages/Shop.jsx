@@ -93,7 +93,7 @@ function Shop() {
 
         {/* Shop Items */}
         <div className="space-y-3">
-          {items.map((item) => {
+          {items && items.length > 0 ? items.map((item) => {
             const owned = isOwned(item.id)
             const canBuy = gems >= item.price
 
@@ -136,7 +136,11 @@ function Shop() {
                 </div>
               </div>
             )
-          })}
+          }) : (
+            <div className="text-center py-8 bg-gray-50 dark:bg-[#1a2c35] rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+              <p className="text-gray-400 font-bold">No items available in this category</p>
+            </div>
+          )}
         </div>
 
         {/* Earn More Gems */}

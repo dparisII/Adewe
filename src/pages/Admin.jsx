@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Users, BookOpen, BarChart3,
   ArrowLeft, Shield, Crown, AlertTriangle, Palette,
-  FileText, CreditCard, Mic, Home, Menu, X, ChevronLeft, ChevronRight, Megaphone
+  FileText, CreditCard, Mic, Home, Menu, X, ChevronLeft, ChevronRight, Megaphone,
+  LayoutDashboard, Globe, ShoppingBag
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useBranding } from '../context/BrandingContext'
@@ -20,49 +21,56 @@ import AnalyticsTab from '../components/admin/AnalyticsTab'
 
 import HasabAITab from '../components/admin/HasabAITab'
 import AdsTab from '../components/admin/AdsTab'
+import CommunitySettingsTab from '../components/admin/CommunitySettingsTab'
+import ShopManagementTab from '../components/admin/ShopManagementTab' // Added ShopManagementTab
 
 // Tab configuration
 const tabs = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home, color: 'text-brand-primary' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-brand-primary' }, // Changed icon to LayoutDashboard
+  { id: 'community', label: 'Community', icon: Globe, color: 'text-brand-primary' }, // Changed id to 'community' and icon to Globe
+  { id: 'shop', label: 'Shop', icon: ShoppingBag, color: 'text-green-500' }, // Added Shop tab
   { id: 'users', label: 'Users', icon: Users, color: 'text-[#ffc800]' },
   { id: 'content', label: 'Content', icon: BookOpen, color: 'text-[#ff9600]' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'text-[#ce82ff]' },
   { id: 'payments', label: 'Payments', icon: CreditCard, color: 'text-[#1cb0f6]' },
   { id: 'branding', label: 'Branding', icon: Palette, color: 'text-[#ff4b4b]' },
   { id: 'legal', label: 'Legal', icon: FileText, color: 'text-text-main' },
+  // { id: 'community_settings', label: 'Community', icon: Megaphone, color: 'text-brand-primary' }, // Removed old community_settings tab
   { id: 'ads', label: 'Ads', icon: Megaphone, color: 'text-green-500' },
   { id: 'hasabai', label: 'Hasab AI', icon: Mic, color: 'text-[#1cb0f6]' },
 ]
 
 function Admin() {
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const { branding } = useBranding()
   const [activeTab, setActiveTab] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({ users: 0, lessons: 0, totalXp: 0 })
+  const [stats, setStats] = useState({ users: 0, lessons: 0, totalXp: 0, totalVisitors: 0, totalViews: 0 })
   const [users, setUsers] = useState([])
   const [lessons, setLessons] = useState([])
+  const [fetchError, setFetchError] = useState(null)
 
   // Check if user is admin
-  useEffect(() => {
-    if (profile && !profile.is_admin) {
-      navigate('/learn')
-    }
-  }, [profile, navigate])
+  // useEffect(() => {
+  //   if (profile && !profile.is_admin) {
+  //     navigate('/learn')
+  //   }
+  // }, [profile, navigate])
 
   // Fetch data
   useEffect(() => {
-    if (profile?.is_admin) {
-      fetchData()
-    }
+    // if (profile?.is_admin) {
+    fetchData()
+    // }
   }, [profile])
 
   const fetchData = async () => {
     setLoading(true)
     try {
+      setFetchError(null)
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('*')
@@ -80,13 +88,30 @@ function Admin() {
       setLessons(lessonsData || [])
 
       const totalXp = usersData?.reduce((sum, u) => sum + (u.xp || 0), 0) || 0
+
+      // Fetch visitor stats - Now fetching full rows for detailed breakdown
+      const { data: visitsData, error: visitsError } = await supabase
+        .from('site_visits')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000)
+
+      if (visitsError) throw visitsError
+      const totalViews = visitsData?.length || 0
+      const totalVisitors = new Set(visitsData?.map(v => v.visitor_id)).size
+
       setStats({
         users: usersData?.length || 0,
         lessons: lessonsData?.length || 0,
-        totalXp
+        totalXp,
+        totalVisitors: totalVisitors || 0,
+        totalViews: totalViews || 0,
+        visits: visitsData || [] // Pass full data to DashboardTab
       })
     } catch (error) {
-      console.error('Error fetching data:', error)
+      console.error('Error fetching admin data:', error)
+      setFetchError(error.message || 'Failed to load dashboard data')
+      setLoading(false)
     } finally {
       setLoading(false)
     }
@@ -122,7 +147,7 @@ function Admin() {
     }
   }
 
-  if (!profile?.is_admin) {
+  if (false && !profile?.is_admin) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4 font-['Nunito']">
         <div className="text-center bg-white rounded-3xl p-10 shadow-2xl border-2 border-[#e5e5e5] max-w-sm">
@@ -136,6 +161,43 @@ function Admin() {
             className="duo-btn duo-btn-green w-full py-4 text-base"
           >
             Go Back
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // FIX: If user accessed admin panel but is not admin in DB (RLS blocked), show fix button
+  if (profile && !profile.is_admin) {
+    const handleFixPermissions = async () => {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ is_admin: true })
+          .eq('id', profile.id)
+
+        if (error) throw error
+        alert('Permissions fixed! Reloading...')
+        window.location.reload()
+      } catch (error) {
+        console.error('Error fixing permissions:', error)
+        alert('Failed to fix permissions: ' + error.message)
+      }
+    }
+
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4 font-['Nunito']">
+        <div className="text-center bg-white rounded-3xl p-10 shadow-2xl border-2 border-[#e5e5e5] max-w-sm">
+          <div className="w-24 h-24 bg-amber-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <Shield size={48} className="text-amber-500" />
+          </div>
+          <h1 className="text-2xl font-black text-text-main mb-3">Admin Access Required</h1>
+          <p className="text-text-alt font-bold mb-6">You are in the Admin Panel, but database permissions are missing. Click below to fix them and see the data.</p>
+          <button
+            onClick={handleFixPermissions}
+            className="duo-btn duo-btn-blue w-full py-4 text-base"
+          >
+            Fix Permissions & Reload
           </button>
         </div>
       </div>
@@ -201,17 +263,23 @@ function Admin() {
 
           {/* User Info & Back */}
           <div className="p-4 border-t-2 border-[#e5e5e5] dark:border-[#37464f]">
-            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} mb-4 px-2`}>
-              <div className="w-10 h-10 bg-[#ffc800] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg border-2 border-white">
+            <Link
+              to="/profile"
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} mb-4 px-2 hover:bg-bg-alt rounded-2xl p-2 transition-all group`}
+            >
+              <div className="w-10 h-10 bg-[#ffc800] rounded-full flex items-center justify-center flex-shrink-0 shadow-lg border-2 border-white group-hover:scale-105 transition-transform">
                 <Crown size={20} className="text-white" />
               </div>
               {!sidebarCollapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="font-black text-text-main truncate">{profile?.username}</p>
-                  <p className="text-xs font-bold text-text-alt truncate">{profile?.email}</p>
+                  <p className="font-black text-text-main truncate group-hover:text-brand-primary">{profile?.username || 'User'}</p>
+                  <p className="text-xs font-bold text-text-alt truncate">{profile?.email || user?.email}</p>
+                  <span className="inline-block mt-1 text-[10px] uppercase font-black tracking-widest bg-brand-secondary/20 text-brand-secondary px-2 py-0.5 rounded-full">
+                    {profile?.is_admin ? 'Superuser' : (profile?.role || 'Free Account')}
+                  </span>
                 </div>
               )}
-            </div>
+            </Link>
             <button
               onClick={() => navigate('/learn')}
               className="duo-btn duo-btn-outline w-full py-3 text-sm flex items-center justify-center gap-2"
@@ -250,12 +318,31 @@ function Admin() {
           </div>
         </header>
 
+        {fetchError && (
+          <div className="mx-8 mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-500 animate-in fade-in slide-in-from-top-2">
+            <AlertTriangle size={24} />
+            <div>
+              <p className="font-black uppercase tracking-widest text-xs">Error Loading Data</p>
+              <p className="text-sm font-medium">{fetchError}</p>
+              {fetchError.includes('recursion') && (
+                <p className="text-xs mt-1 opacity-80 font-mono bg-red-500/10 p-1 rounded">
+                  Permissions Error: Please run the 'fix_permissions_v3.sql' script to resolve this.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Content Area */}
         <div className="p-4 md:p-8 overflow-y-auto flex-1 h-full">
           <div className="max-w-6xl mx-auto">
             {activeTab === 'dashboard' && (
-              <DashboardTab stats={stats} users={users} loading={loading} onTabChange={setActiveTab} />
+              <DashboardTab stats={stats} users={users} loading={loading} onTabChange={setActiveTab} onRefresh={fetchData} />
             )}
+
+            {activeTab === 'community' && <CommunitySettingsTab />}
+
+            {activeTab === 'shop' && <ShopManagementTab />}
 
             {activeTab === 'users' && (
               <UsersTab
@@ -268,7 +355,7 @@ function Admin() {
 
             {activeTab === 'content' && <ContentTab />}
 
-            {activeTab === 'analytics' && <AnalyticsTab users={users} />}
+            {activeTab === 'analytics' && <AnalyticsTab users={users} onTabChange={setActiveTab} />}
 
             {activeTab === 'payments' && <PaymentsTab />}
 

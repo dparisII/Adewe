@@ -273,7 +273,7 @@ function Landing() {
       <section className="py-24 md:py-32 text-center bg-bg-main transition-colors duration-300">
         <div className="max-w-[600px] mx-auto px-4">
           <h2 className="text-3xl md:text-5xl font-black text-text-main mb-12">
-            Learn a language with us.
+            Learn Ethiopian language with us.
           </h2>
           <button
             onClick={handleGetStarted}

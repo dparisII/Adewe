@@ -39,9 +39,17 @@ export const languages = [
     script: 'latin',
     direction: 'ltr',
   },
+  {
+    code: 'geez',
+    name: "Ge'ez",
+    nativeName: 'ግዕዝ',
+    flag: '🇪🇹',
+    script: 'ethiopic',
+    direction: 'ltr',
+  },
 ]
 
 export const getLanguage = (code) => languages.find((l) => l.code === code)
 
-export const getOtherLanguages = (excludeCode) => 
+export const getOtherLanguages = (excludeCode) =>
   languages.filter((l) => l.code !== excludeCode)

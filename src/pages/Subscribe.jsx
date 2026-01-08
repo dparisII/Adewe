@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Check, Crown, Heart, Users, Building2,
-  Copy, CheckCircle, XCircle, X, Loader2
+  Copy, CheckCircle, XCircle, X, Loader2, Star, Tag
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -16,8 +16,8 @@ function Toast({ message, type, onClose }) {
 
   return (
     <div className={`fixed bottom-4 right-4 z-[100] flex items-center gap-3 p-4 rounded-xl border backdrop-blur-sm ${type === 'success'
-        ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-        : 'bg-red-500/20 border-red-500/50 text-red-400'
+      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+      : 'bg-red-500/20 border-red-500/50 text-red-400'
       }`}>
       {type === 'success' ? <CheckCircle size={20} /> : <XCircle size={20} />}
       <p className="text-sm font-medium">{message}</p>
@@ -30,34 +30,77 @@ function Toast({ message, type, onClose }) {
 
 const plans = [
   {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    period: 'forever',
-    description: 'Basic access',
-    features: ['5 hearts per day', 'Basic lessons', '2 languages'],
-    icon: Heart
+    id: 'super',
+    name: 'Super Adewe',
+    price_monthly_etb: 499,
+    price_monthly: 8.99,
+    period: 'month',
+    description: 'Ad-free experience with unlimited hearts',
+    features: [
+      'Unlimited Hearts',
+      'No interruptions (no ads)',
+      'Personalized Practice',
+      'Offline Access'
+    ],
+    icon: Crown,
+    color: 'text-[#ffc800]',
+    bg: 'bg-[#ffc800]/10',
+    border: 'border-[#ffc800]'
   },
   {
-    id: 'premium',
-    name: 'Premium',
-    price: 299,
+    id: 'super_family',
+    name: 'Super Family',
+    price_monthly_etb: 1299,
+    price_monthly: 14.99,
     period: 'month',
-    currency: 'ETB',
-    description: 'Full access',
-    features: ['Unlimited hearts', 'All lessons', 'All languages', 'No ads', 'Offline mode'],
-    icon: Crown,
+    description: 'Protect all your family\'s hearts',
+    features: [
+      'Everything in Super',
+      'Up to 6 family members',
+      'Family dashboard',
+      'One bill for all'
+    ],
+    icon: Users,
+    color: 'text-[#1cb0f6]',
+    bg: 'bg-[#1cb0f6]/10',
+    border: 'border-[#1cb0f6]',
     popular: true
   },
   {
-    id: 'family',
-    name: 'Family',
-    price: 499,
+    id: 'max',
+    name: 'Adewe Max',
+    price_monthly_etb: 899,
+    price_monthly: 16.99,
     period: 'month',
-    currency: 'ETB',
-    description: 'For families',
-    features: ['Everything in Premium', 'Up to 6 members', 'Family dashboard'],
-    icon: Users
+    description: 'Advanced AI features for deep learning',
+    features: [
+      'Everything in Super',
+      'AI Roleplay',
+      'Explain My Answer',
+      'Smart Review'
+    ],
+    icon: Star,
+    color: 'text-[#ff4b4b]',
+    bg: 'bg-[#ff4b4b]/10',
+    border: 'border-[#ff4b4b]'
+  },
+  {
+    id: 'max_family',
+    name: 'Max Family',
+    price_monthly_etb: 1999,
+    price_monthly: 24.99,
+    period: 'month',
+    description: 'The ultimate learning for everyone',
+    features: [
+      'Everything in Max',
+      'Up to 6 family members',
+      'Family performance insights',
+      'Priority Support'
+    ],
+    icon: Building2,
+    color: 'text-[#ce82ff]',
+    bg: 'bg-[#ce82ff]/10',
+    border: 'border-[#ce82ff]'
   }
 ]
 
@@ -66,21 +109,78 @@ function Subscribe() {
   const { user } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [step, setStep] = useState(1) // 1: select plan, 2: payment details, 3: submit reference
-  const [bankSettings, setBankSettings] = useState(null)
+  const [currency, setCurrency] = useState('ETB')
+  const [bankAccounts, setBankAccounts] = useState([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [toast, setToast] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [copyId, setCopyId] = useState('')
+  const [tiers, setTiers] = useState([])
   const [paymentForm, setPaymentForm] = useState({
     transaction_reference: '',
     payer_name: '',
     payer_phone: '',
     bank_name: ''
   })
+  const [promoCode, setPromoCode] = useState('')
+  const [promoLoading, setPromoLoading] = useState(false)
+  const [appliedPromo, setAppliedPromo] = useState(null) // { code, discount_percent, discount_amount }
+  const [promoError, setPromoError] = useState('')
 
   useEffect(() => {
     fetchBankSettings()
+    fetchTiers()
   }, [])
+
+  const fetchTiers = async () => {
+    setLoading(true)
+    try {
+      // Fetch subscription tiers from database
+      const { data: dbTiers, error: dbError } = await supabase
+        .from('subscription_tiers')
+        .select('*')
+        .order('sort_order')
+
+      if (dbError) throw dbError
+
+      if (dbTiers && dbTiers.length > 0) {
+        // Map database tiers to UI configurations
+        const mappedTiers = dbTiers.filter(t => t.name !== 'Free' && t.is_visible !== false).map(tier => {
+          const nameLower = tier.name.toLowerCase()
+          let config = {}
+
+          if (nameLower.includes('family') && (nameLower.includes('max') || nameLower.includes('premium'))) {
+            config = { icon: Building2, color: 'text-[#ff4b4b]', bg: 'bg-[#ff4b4b]/10', border: 'border-[#ff4b4b]', popular: false }
+          } else if (nameLower.includes('max')) {
+            config = { icon: Star, color: 'text-[#ff4b4b]', bg: 'bg-[#ff4b4b]/10', border: 'border-[#ff4b4b]', popular: false }
+          } else if (nameLower.includes('family')) {
+            config = { icon: Users, color: 'text-[#1cb0f6]', bg: 'bg-[#1cb0f6]/10', border: 'border-[#1cb0f6]', popular: true }
+          } else {
+            config = { icon: Crown, color: 'text-[#ffc800]', bg: 'bg-[#ffc800]/10', border: 'border-[#ffc800]', popular: true }
+          }
+
+          return {
+            ...tier,
+            id: tier.id,
+            period: 'month',
+            icon: config.icon,
+            color: config.color,
+            bg: config.bg,
+            border: config.border,
+            popular: tier.is_popular !== undefined ? tier.is_popular : config.popular,
+            features: Array.isArray(tier.features) ? tier.features : JSON.parse(tier.features || '[]')
+          }
+        })
+        setTiers(mappedTiers)
+      }
+    } catch (err) {
+      console.error('Error fetching tiers:', err)
+      setTiers([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const fetchBankSettings = async () => {
     setLoading(true)
@@ -88,11 +188,17 @@ function Subscribe() {
       const { data } = await supabase
         .from('local_payment_settings')
         .select('*')
-        .eq('is_enabled', true)
         .single()
 
-      if (data) {
-        setBankSettings(data)
+      if (data && data.bank_accounts) {
+        setBankAccounts(data.bank_accounts)
+      } else if (data) {
+        setBankAccounts([{
+          bank_name: data.bank_name,
+          account_name: data.account_name,
+          account_number: data.account_number,
+          currency: data.currency
+        }])
       }
     } catch (error) {
       console.log('Bank settings not available')
@@ -121,15 +227,24 @@ function Subscribe() {
       return
     }
 
+    // Map plan to database tier
+    let tierId = selectedPlan.id
+
+    // If for some reason we still need matching (e.g. legacy logic)
+    if (selectedPlan.db_tier) {
+      tierId = selectedPlan.db_tier.id
+    }
+
+    const price = currency === 'ETB' ? selectedPlan.price_monthly_etb : selectedPlan.price_monthly
     setSubmitting(true)
     try {
       const { error } = await supabase
         .from('local_payment_requests')
         .insert([{
           user_id: user.id,
-          tier_id: selectedPlan.id,
-          amount: selectedPlan.price,
-          currency: selectedPlan.currency || 'ETB',
+          tier_id: tierId,
+          amount: price,
+          currency: currency,
           transaction_reference: paymentForm.transaction_reference,
           bank_name: paymentForm.bank_name,
           payer_name: paymentForm.payer_name,
@@ -142,8 +257,8 @@ function Subscribe() {
       setToast({ message: 'Payment submitted! We will verify and activate your subscription.', type: 'success' })
       setStep(4) // Success step
     } catch (error) {
-      console.error('Error submitting payment:', error)
-      setToast({ message: 'Error submitting payment. Please try again.', type: 'error' })
+      console.error('CRITICAL: Error submitting payment:', error)
+      setToast({ message: `Submission failed: ${error.message || 'Please try again'}`, type: 'error' })
     } finally {
       setSubmitting(false)
     }
@@ -151,22 +266,93 @@ function Subscribe() {
 
   const showToast = (message, type) => setToast({ message, type })
 
+  const applyPromoCode = async () => {
+    if (!promoCode.trim()) return
+
+    setPromoLoading(true)
+    setPromoError('')
+    setAppliedPromo(null)
+
+    try {
+      const { data, error } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .eq('code', promoCode.trim().toUpperCase())
+        .eq('is_active', true)
+        .single()
+
+      if (error || !data) {
+        setPromoError('Invalid or expired promo code')
+        return
+      }
+
+      // Check usage limit
+      if (data.max_uses && data.uses_count >= data.max_uses) {
+        setPromoError('This promo code has reached its usage limit')
+        return
+      }
+
+      // Check expiry
+      if (data.valid_until && new Date(data.valid_until) < new Date()) {
+        setPromoError('This promo code has expired')
+        return
+      }
+
+      // Check if promo has any discount configured
+      const hasDiscount = data.discount_percent > 0 || data.discount_amount > 0
+      if (!hasDiscount) {
+        setPromoError('This promo code has no discount configured')
+        return
+      }
+
+      setAppliedPromo({
+        id: data.id,
+        code: data.code,
+        discount_percent: data.discount_percent || 0,
+        discount_amount: data.discount_amount || 0
+      })
+
+      const discountText = data.discount_percent > 0
+        ? `${data.discount_percent}% off`
+        : `${data.discount_amount} ${currency} off`
+      showToast(`Promo code applied! ${discountText}`, 'success')
+    } catch (err) {
+      console.error('Error applying promo:', err)
+      setPromoError('Failed to apply promo code')
+    } finally {
+      setPromoLoading(false)
+    }
+  }
+
+  const getDiscountedPrice = () => {
+    const basePrice = currency === 'ETB' ? selectedPlan?.price_monthly_etb : selectedPlan?.price_monthly
+    if (!appliedPromo || !basePrice) return basePrice
+
+    if (appliedPromo.discount_percent) {
+      return (basePrice * (1 - appliedPromo.discount_percent / 100)).toFixed(2)
+    }
+    if (appliedPromo.discount_amount) {
+      return Math.max(0, basePrice - appliedPromo.discount_amount).toFixed(2)
+    }
+    return basePrice
+  }
+
   return (
-    <div className="min-h-screen bg-[#131f24]">
+    <div className="min-h-screen bg-bg-main dark:bg-[#131f24]">
       {/* Toast */}
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
       {/* Header */}
-      <header className="px-6 py-4 border-b border-[#3c5a6a]/30">
+      <header className="px-6 py-4 border-b border-border-main dark:border-[#3c5a6a]/30">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <button
             onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+            className="flex items-center gap-2 text-text-alt hover:text-text-main dark:hover:text-white transition-colors"
           >
             <ArrowLeft size={20} />
             <span>Back</span>
           </button>
-          <h1 className="text-white font-bold">Upgrade to Premium</h1>
+          <h1 className="text-text-main dark:text-white font-bold">Upgrade to Premium</h1>
           <div className="w-20" />
         </div>
       </header>
@@ -175,13 +361,13 @@ function Subscribe() {
         <div className="max-w-4xl mx-auto">
           {/* Progress Steps */}
           <div className="flex items-center justify-center gap-4 mb-8">
-            {[1, 2, 3].map((s) => (
+            {[1, 2, 3, 4].map((s) => (
               <div key={s} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${step >= s ? 'bg-emerald-500 text-white' : 'bg-[#1a2c35] text-slate-500'
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${step >= s ? 'bg-brand-secondary text-white' : 'bg-bg-card dark:bg-[#1a2c35] text-text-alt'
                   }`}>
                   {step > s ? <Check size={16} /> : s}
                 </div>
-                {s < 3 && <div className={`w-12 h-1 rounded ${step > s ? 'bg-emerald-500' : 'bg-[#1a2c35]'}`} />}
+                {s < 4 && <div className={`w-12 h-1 rounded ${step > s ? 'bg-brand-secondary' : 'bg-bg-card dark:bg-[#1a2c35]'}`} />}
               </div>
             ))}
           </div>
@@ -189,49 +375,65 @@ function Subscribe() {
           {/* Step 1: Select Plan */}
           {step === 1 && (
             <div>
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Choose Your Plan</h2>
-                <p className="text-slate-400">Select the plan that works best for you</p>
+              <div className="flex justify-center mb-8">
+                <div className="bg-bg-card dark:bg-[#1a2c35] p-1 rounded-xl flex gap-1 border-2 border-border-main dark:border-[#3c5a6a]/30">
+                  <button
+                    onClick={() => setCurrency('ETB')}
+                    className={`px-6 py-2 rounded-lg font-black transition-all ${currency === 'ETB' ? 'bg-brand-secondary text-white shadow-lg' : 'text-text-alt hover:text-text-main dark:hover:text-white'}`}
+                  >
+                    ETB
+                  </button>
+                  <button
+                    onClick={() => setCurrency('USD')}
+                    className={`px-6 py-2 rounded-lg font-black transition-all ${currency === 'USD' ? 'bg-brand-secondary text-white shadow-lg' : 'text-text-alt hover:text-text-main dark:hover:text-white'}`}
+                  >
+                    USD
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {plans.filter(p => p.price > 0).map((plan) => (
-                  <button
-                    key={plan.id}
-                    onClick={() => {
-                      setSelectedPlan(plan)
-                      setStep(2)
-                    }}
-                    className={`p-6 rounded-xl border-2 text-left transition-all hover:scale-[1.02] ${plan.popular
-                        ? 'border-emerald-500 bg-emerald-500/10'
-                        : 'border-[#3c5a6a]/30 bg-[#1a2c35] hover:border-[#3c5a6a]'
-                      }`}
-                  >
-                    {plan.popular && (
-                      <span className="inline-block px-2 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full mb-3">
-                        POPULAR
-                      </span>
-                    )}
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${plan.popular ? 'bg-emerald-500 text-white' : 'bg-[#131f24] text-slate-400'
-                      }`}>
-                      <plan.icon size={20} />
-                    </div>
-                    <h3 className="text-white font-bold text-lg">{plan.name}</h3>
-                    <p className="text-slate-400 text-sm mb-3">{plan.description}</p>
-                    <div className="flex items-baseline gap-1 mb-4">
-                      <span className="text-3xl font-bold text-white">{plan.price}</span>
-                      <span className="text-slate-400 text-sm">{plan.currency}/{plan.period}</span>
-                    </div>
-                    <ul className="space-y-2">
-                      {plan.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                          <Check size={14} className="text-emerald-500" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+                {tiers.map((plan) => {
+                  const price = currency === 'ETB' ? plan.price_monthly_etb : plan.price_monthly
+                  const isSelected = selectedPlan?.id === plan.id
+
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => {
+                        setSelectedPlan(plan)
+                        setStep(2)
+                      }}
+                      className={`relative p-6 rounded-3xl border-2 text-left transition-all ${isSelected
+                        ? `${plan.border} ${plan.bg} shadow-lg shadow-${plan.color.split('[')[1].split(']')[0]}/10`
+                        : 'border-border-main dark:border-[#3c5a6a]/30 bg-bg-card dark:bg-[#1a2c35] hover:border-brand-secondary/50 shadow-sm'
+                        }`}
+                    >
+                      {plan.popular && (
+                        <span className={`inline-block px-2 py-1 ${plan.bg} ${plan.color} text-xs font-bold rounded-full mb-3 uppercase tracking-widest`}>
+                          MOST POPULAR
+                        </span>
+                      )}
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${plan.bg} ${plan.color}`}>
+                        <plan.icon size={24} />
+                      </div>
+                      <h3 className="text-text-main dark:text-white font-black text-lg">{plan.name}</h3>
+                      <p className="text-text-alt dark:text-slate-400 text-sm mb-3 min-h-[40px]">{plan.description}</p>
+                      <div className="flex items-baseline gap-1 mb-4">
+                        <span className="text-3xl font-black text-text-main dark:text-white">{currency === 'USD' ? '$' : ''}{price}</span>
+                        <span className="text-text-alt dark:text-slate-400 text-sm font-bold uppercase">{currency === 'ETB' ? 'ETB' : '/mo'}</span>
+                      </div>
+                      <ul className="space-y-2">
+                        {plan.features.map((f, i) => (
+                          <li key={i} className="flex items-center gap-2 text-sm text-text-main dark:text-slate-300 font-bold">
+                            <Check size={14} className={plan.color} />
+                            {f}
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -240,68 +442,104 @@ function Subscribe() {
           {step === 2 && selectedPlan && (
             <div>
               <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Make Payment</h2>
-                <p className="text-slate-400">Transfer {selectedPlan.price} {selectedPlan.currency} to our bank account</p>
+                <h2 className="text-2xl font-bold text-text-main dark:text-white mb-2">Make Payment</h2>
+                <p className="text-text-alt dark:text-slate-400">Transfer {currency === 'ETB' ? selectedPlan.price_monthly_etb : selectedPlan.price_monthly} {currency} to one of our accounts</p>
               </div>
 
               {loading ? (
                 <div className="flex justify-center py-12">
-                  <Loader2 size={32} className="text-emerald-500 animate-spin" />
+                  <Loader2 size={32} className="text-brand-secondary animate-spin" />
                 </div>
-              ) : bankSettings ? (
-                <div className="max-w-md mx-auto">
-                  <div className="bg-[#1a2c35] rounded-xl border border-[#3c5a6a]/30 p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <Building2 size={24} className="text-emerald-500" />
-                      <h3 className="text-white font-bold">Bank Transfer Details</h3>
+              ) : bankAccounts.length > 0 ? (
+                <div className="max-w-md mx-auto space-y-4">
+                  {bankAccounts.filter(acc => acc.currency === currency || !acc.currency).map((acc, idx) => (
+                    <div key={idx} className="bg-bg-card dark:bg-[#1a2c35] rounded-xl border border-border-main dark:border-[#3c5a6a]/30 p-6 shadow-sm">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Building2 size={24} className="text-brand-secondary" />
+                        <h3 className="text-text-main dark:text-white font-bold">{acc.bank_name}</h3>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="p-3 bg-bg-main dark:bg-[#131f24] rounded-lg">
+                          <p className="text-text-alt dark:text-slate-400 text-xs">Account Name</p>
+                          <p className="text-text-main dark:text-white font-medium">{acc.account_name}</p>
+                        </div>
+
+                        <div className="flex justify-between items-center p-3 bg-bg-main dark:bg-[#131f24] rounded-lg">
+                          <div>
+                            <p className="text-text-alt dark:text-slate-400 text-xs">Account Number</p>
+                            <p className="text-text-main dark:text-white font-mono font-bold text-lg">{acc.account_number}</p>
+                          </div>
+                          <button
+                            onClick={() => { copyToClipboard(acc.account_number); setCopyId(acc.account_number) }}
+                            className="p-2 text-text-alt hover:text-text-main dark:text-slate-400 dark:hover:text-white"
+                          >
+                            {copied && copyId === acc.account_number ? <Check size={18} className="text-brand-secondary" /> : <Copy size={18} />}
+                          </button>
+                        </div>
+                      </div>
                     </div>
+                  ))}
 
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center p-3 bg-[#131f24] rounded-lg">
-                        <div>
-                          <p className="text-slate-400 text-xs">Bank Name</p>
-                          <p className="text-white font-medium">{bankSettings.bank_name}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center p-3 bg-[#131f24] rounded-lg">
-                        <div>
-                          <p className="text-slate-400 text-xs">Account Name</p>
-                          <p className="text-white font-medium">{bankSettings.account_name}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center p-3 bg-[#131f24] rounded-lg">
-                        <div>
-                          <p className="text-slate-400 text-xs">Account Number</p>
-                          <p className="text-white font-mono font-bold text-lg">{bankSettings.account_number}</p>
-                        </div>
+                  {/* Promo Code Section */}
+                  <div className="bg-bg-card dark:bg-[#1a2c35] rounded-xl border border-border-main dark:border-[#3c5a6a]/30 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Tag size={18} className="text-brand-secondary" />
+                      <span className="text-text-main dark:text-white font-bold text-sm">Have a promo code?</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
+                        placeholder="Enter code"
+                        className="flex-1 p-3 bg-bg-main dark:bg-[#131f24] border border-border-main dark:border-[#3c5a6a]/30 rounded-lg text-text-main dark:text-white font-mono uppercase focus:outline-none focus:border-brand-secondary"
+                        disabled={appliedPromo}
+                      />
+                      {appliedPromo ? (
                         <button
-                          onClick={() => copyToClipboard(bankSettings.account_number)}
-                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-600/30 rounded-lg"
+                          onClick={() => { setAppliedPromo(null); setPromoCode(''); }}
+                          className="px-4 py-3 bg-red-500/20 text-red-400 font-bold rounded-lg hover:bg-red-500/30 transition-colors"
                         >
-                          {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                          Remove
                         </button>
-                      </div>
-
-                      <div className="flex justify-between items-center p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                        <div>
-                          <p className="text-emerald-400 text-xs">Amount to Pay</p>
-                          <p className="text-emerald-400 font-bold text-xl">{selectedPlan.price} {bankSettings.currency}</p>
-                        </div>
-                      </div>
+                      ) : (
+                        <button
+                          onClick={applyPromoCode}
+                          disabled={promoLoading || !promoCode.trim()}
+                          className="px-4 py-3 bg-brand-secondary text-white font-bold rounded-lg hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {promoLoading ? <Loader2 size={16} className="animate-spin" /> : 'Apply'}
+                        </button>
+                      )}
                     </div>
+                    {promoError && <p className="text-red-400 text-xs mt-2">{promoError}</p>}
+                    {appliedPromo && (
+                      <div className="mt-2 flex items-center gap-2 text-brand-secondary text-sm font-bold">
+                        <CheckCircle size={16} />
+                        {appliedPromo.discount_percent > 0
+                          ? `${appliedPromo.discount_percent}% discount applied!`
+                          : `${appliedPromo.discount_amount} ${currency} discount applied!`
+                        }
+                      </div>
+                    )}
+                  </div>
 
-                    {bankSettings.instructions && (
-                      <p className="mt-4 text-sm text-slate-400 bg-[#131f24] p-3 rounded-lg">
-                        ℹ️ {bankSettings.instructions}
+                  <div className="bg-brand-secondary/10 border border-brand-secondary/30 rounded-xl p-4 text-center">
+                    <p className="text-brand-secondary text-xs uppercase font-black tracking-widest mb-1">Total to Pay</p>
+                    {appliedPromo && (
+                      <p className="text-text-alt dark:text-slate-400 text-sm line-through">
+                        {currency === 'USD' ? '$' : ''}{currency === 'ETB' ? selectedPlan.price_monthly_etb : selectedPlan.price_monthly} {currency}
                       </p>
                     )}
+                    <p className="text-brand-secondary font-bold text-2xl">
+                      {currency === 'USD' ? '$' : ''}{getDiscountedPrice()} {currency}
+                    </p>
                   </div>
 
                   <button
                     onClick={() => setStep(3)}
-                    className="w-full py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors"
+                    className="w-full py-4 bg-brand-secondary text-white font-black uppercase tracking-widest rounded-xl hover:brightness-110 transition-all shadow-lg shadow-brand-secondary/20 active:scale-95"
                   >
                     I've Made the Payment
                   </button>
@@ -319,51 +557,51 @@ function Subscribe() {
           {step === 3 && selectedPlan && (
             <div>
               <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">Submit Payment Details</h2>
-                <p className="text-slate-400">Enter your transaction reference number</p>
+                <h2 className="text-2xl font-bold text-text-main dark:text-white mb-2">Submit Payment Details</h2>
+                <p className="text-text-alt dark:text-slate-400">Enter your transaction reference number</p>
               </div>
 
               <form onSubmit={handleSubmitPayment} className="max-w-md mx-auto space-y-4">
                 <div>
-                  <label className="block text-slate-400 text-sm mb-1">Transaction Reference (FT/Invoice No) *</label>
+                  <label className="block text-text-alt dark:text-slate-400 text-sm mb-1">Transaction Reference (FT/Invoice No) *</label>
                   <input
                     type="text"
                     value={paymentForm.transaction_reference}
                     onChange={(e) => setPaymentForm({ ...paymentForm, transaction_reference: e.target.value })}
                     placeholder="e.g., FT123456789"
-                    className="w-full p-3 bg-[#1a2c35] border border-[#3c5a6a]/30 rounded-lg text-white font-mono focus:outline-none focus:border-emerald-500"
+                    className="w-full p-3 bg-bg-card dark:bg-[#1a2c35] border border-border-main dark:border-[#3c5a6a]/30 rounded-lg text-text-main dark:text-white font-mono focus:outline-none focus:border-brand-secondary"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 text-sm mb-1">Your Name</label>
+                  <label className="block text-text-alt dark:text-slate-400 text-sm mb-1">Your Name</label>
                   <input
                     type="text"
                     value={paymentForm.payer_name}
                     onChange={(e) => setPaymentForm({ ...paymentForm, payer_name: e.target.value })}
                     placeholder="Name used for transfer"
-                    className="w-full p-3 bg-[#1a2c35] border border-[#3c5a6a]/30 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full p-3 bg-bg-card dark:bg-[#1a2c35] border border-border-main dark:border-[#3c5a6a]/30 rounded-lg text-text-main dark:text-white focus:outline-none focus:border-brand-secondary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 text-sm mb-1">Phone Number</label>
+                  <label className="block text-text-alt dark:text-slate-400 text-sm mb-1">Phone Number</label>
                   <input
                     type="tel"
                     value={paymentForm.payer_phone}
                     onChange={(e) => setPaymentForm({ ...paymentForm, payer_phone: e.target.value })}
                     placeholder="e.g., 0911234567"
-                    className="w-full p-3 bg-[#1a2c35] border border-[#3c5a6a]/30 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full p-3 bg-bg-card dark:bg-[#1a2c35] border border-border-main dark:border-[#3c5a6a]/30 rounded-lg text-text-main dark:text-white focus:outline-none focus:border-brand-secondary"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 text-sm mb-1">Bank Used</label>
+                  <label className="block text-text-alt dark:text-slate-400 text-sm mb-1">Bank Used</label>
                   <select
                     value={paymentForm.bank_name}
                     onChange={(e) => setPaymentForm({ ...paymentForm, bank_name: e.target.value })}
-                    className="w-full p-3 bg-[#1a2c35] border border-[#3c5a6a]/30 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full p-3 bg-bg-card dark:bg-[#1a2c35] border border-border-main dark:border-[#3c5a6a]/30 rounded-lg text-text-main dark:text-white focus:outline-none focus:border-brand-secondary"
                   >
                     <option value="">Select bank</option>
                     <option value="CBE">Commercial Bank of Ethiopia</option>
@@ -379,7 +617,7 @@ function Subscribe() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-brand-secondary text-white font-black uppercase tracking-widest rounded-xl hover:brightness-110 transition-all shadow-lg shadow-brand-secondary/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
@@ -397,16 +635,16 @@ function Subscribe() {
           {/* Step 4: Success */}
           {step === 4 && (
             <div className="text-center py-12">
-              <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle size={40} className="text-emerald-500" />
+              <div className="w-20 h-20 bg-brand-secondary/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle size={40} className="text-brand-secondary" />
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Payment Submitted!</h2>
-              <p className="text-slate-400 mb-8 max-w-md mx-auto">
+              <h2 className="text-2xl font-bold text-text-main dark:text-white mb-2">Payment Submitted!</h2>
+              <p className="text-text-alt dark:text-slate-400 mb-8 max-w-md mx-auto">
                 We've received your payment details. Our team will verify your payment and activate your subscription within 24 hours.
               </p>
               <button
                 onClick={() => navigate('/learn')}
-                className="px-6 py-3 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-colors"
+                className="px-6 py-3 bg-brand-secondary text-white font-bold rounded-xl hover:brightness-110 transition-colors"
               >
                 Continue Learning
               </button>

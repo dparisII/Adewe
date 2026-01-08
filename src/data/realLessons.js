@@ -153,10 +153,30 @@ const somaliLessons = {
   }
 }
 
+const geezLessons = {
+  greetings: {
+    vocabulary: [
+      { english: 'Hello', geez: 'ሰላም (Selam)', pronunciation: 'selam' },
+      { english: 'Peace', geez: 'አመክሮ (Amekro)', pronunciation: 'amekro' },
+      { english: 'Holy', geez: 'ቅዱስ (Qidus)', pronunciation: 'qidus' },
+      { english: 'King', geez: 'ንጉሥ (Nigus)', pronunciation: 'nigus' },
+      { english: 'Prayer', geez: 'ጸሎት (Tselot)', pronunciation: 'tselot' },
+    ],
+    phrases: []
+  },
+  numbers: {
+    vocabulary: [
+      { english: '1', geez: 'አሐዱ (Ahadu)', pronunciation: 'ahadu' },
+      { english: '2', geez: 'ክልኤቱ (Kilietu)', pronunciation: 'kilietu' },
+      { english: '3', geez: 'ሠለስቱ (Selestu)', pronunciation: 'selestu' },
+    ]
+  }
+}
+
 // Generate exercises from vocabulary
 const generateExercisesFromVocab = (vocab, targetLang) => {
   const exercises = []
-  
+
   // Translation exercises
   vocab.forEach((item, index) => {
     if (index < 3) { // First 3 items
@@ -174,7 +194,7 @@ const generateExercisesFromVocab = (vocab, targetLang) => {
       })
     }
   })
-  
+
   // Multiple choice exercises
   vocab.forEach((item, index) => {
     if (index >= 3 && index < 6) { // Next 3 items
@@ -191,7 +211,7 @@ const generateExercisesFromVocab = (vocab, targetLang) => {
       })
     }
   })
-  
+
   // Matching exercise
   if (vocab.length >= 4) {
     exercises.push({
@@ -202,7 +222,7 @@ const generateExercisesFromVocab = (vocab, targetLang) => {
       }))
     })
   }
-  
+
   // Fill in the blank
   vocab.forEach((item, index) => {
     if (index >= 6 && index < 8) {
@@ -219,7 +239,7 @@ const generateExercisesFromVocab = (vocab, targetLang) => {
       })
     }
   })
-  
+
   return exercises
 }
 
@@ -229,13 +249,14 @@ export const realLessonsData = {
   tigrinya: tigrinyaLessons,
   oromo: oromoLessons,
   somali: somaliLessons,
+  geez: geezLessons,
 }
 
 // Get real exercises for a specific topic and language
 export const getRealExercises = (language, topic) => {
   const langData = realLessonsData[language]
   if (!langData || !langData[topic]) return null
-  
+
   return generateExercisesFromVocab(langData[topic].vocabulary, language)
 }
 
@@ -243,7 +264,7 @@ export const getRealExercises = (language, topic) => {
 export const getVocabulary = (language, topic) => {
   const langData = realLessonsData[language]
   if (!langData || !langData[topic]) return []
-  
+
   return langData[topic].vocabulary || []
 }
 
@@ -251,7 +272,7 @@ export const getVocabulary = (language, topic) => {
 export const getPhrases = (language, topic) => {
   const langData = realLessonsData[language]
   if (!langData || !langData[topic]) return []
-  
+
   return langData[topic].phrases || []
 }
 

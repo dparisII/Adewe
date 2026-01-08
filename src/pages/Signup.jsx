@@ -184,20 +184,6 @@ function Signup() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-8">
-            <div className="flex-1 h-[2px] bg-border-main"></div>
-            <span className="text-text-alt font-black text-sm uppercase tracking-widest">OR</span>
-            <div className="flex-1 h-[2px] bg-border-main"></div>
-          </div>
-
-          <div className="space-y-4">
-            <button className="duo-btn duo-btn-white w-full py-3 text-sm flex items-center justify-center gap-3">
-              <span className="text-xl">🔍</span>
-              Google
-            </button>
-          </div>
-
           <p className="text-center text-text-alt font-bold text-sm mt-8 leading-relaxed">
             By signing up to Adewe, you agree to our <Link to="/terms" className="text-brand-secondary hover:brightness-90">Terms</Link> and <Link to="/privacy" className="text-brand-secondary hover:brightness-90">Privacy Policy</Link>.
           </p>

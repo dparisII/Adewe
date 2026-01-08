@@ -7,8 +7,11 @@ import TranslationExercise from '../components/exercises/TranslationExercise'
 import MatchingExercise from '../components/exercises/MatchingExercise'
 import MultipleChoiceExercise from '../components/exercises/MultipleChoiceExercise'
 import FillBlankExercise from '../components/exercises/FillBlankExercise'
+import { useSound } from '../hooks/useSound'
 
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
+import { triggerMilestone } from '../lib/communityTriggers'
 
 function Lesson() {
   const { unitId, lessonId } = useParams()
@@ -23,7 +26,8 @@ function Lesson() {
     incrementStreak,
     completeLesson,
     completedLessons,
-    recordMistake
+    recordMistake,
+    addGems
   } = useStore()
 
   const lesson = getLesson(nativeLanguage, learningLanguage, unitId, lessonId)
@@ -35,17 +39,29 @@ function Lesson() {
   const [xpEarned, setXpEarned] = useState(0)
   const [showResults, setShowResults] = useState(false)
   const [correctAnswers, setCorrectAnswers] = useState(0)
+  const [shuffledExercises, setShuffledExercises] = useState([])
+  const [boxState, setBoxState] = useState('closed') // closed, opening, opened
+  const [boxReward, setBoxReward] = useState(0)
+  const { playCorrect, playError, playComplete, playClick } = useSound()
 
   useEffect(() => {
     if (!lesson) {
       navigate('/learn')
+    } else {
+      // Robust shuffle: Fisher-Yates
+      const exercises = [...lesson.exercises]
+      for (let i = exercises.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [exercises[i], exercises[j]] = [exercises[j], exercises[i]];
+      }
+      setShuffledExercises(exercises)
     }
   }, [lesson, navigate])
 
-  if (!lesson) return null
+  if (!lesson || shuffledExercises.length === 0) return null
 
-  const currentExercise = lesson.exercises[currentExerciseIndex]
-  const progress = ((currentExerciseIndex) / lesson.exercises.length) * 100
+  const currentExercise = shuffledExercises[currentExerciseIndex]
+  const progress = ((currentExerciseIndex) / shuffledExercises.length) * 100
 
   const recordAttempt = async (isCorrect, answer) => {
     // Record to local store for Immediate Admin visibility
@@ -54,48 +70,44 @@ function Lesson() {
         exercise_id: currentExercise.id || `${lessonId}-${currentExerciseIndex}`,
         exercise_type: currentExercise.type,
         correct_answer: currentExercise.answer,
-        wrong_answer: answer,
+        wrong_answer: typeof answer === 'object' ? JSON.stringify(answer) : answer,
         language: learningLanguage,
         user_id: profile?.id || 'guest'
       })
     }
 
-    if (!user) return
+    if (!profile?.id) return
+
     try {
-      await supabase.from('exercise_attempts').insert({
-        user_id: user.id,
-        exercise_id: currentExercise.id || `${lessonId}-${currentExerciseIndex}`,
-        exercise_type: currentExercise.type,
-        is_correct: isCorrect,
-        user_answer: answer,
-        correct_answer: currentExercise.answer,
-        language: learningLanguage
+      // 1. Try the robust RPC function
+      const { error: rpcError } = await supabase.rpc('log_exercise_attempt', {
+        p_user_id: profile.id,
+        p_exercise_id: currentExercise.id || `${lessonId}-${currentExerciseIndex}`,
+        p_lesson_id: lessonId,
+        p_language: learningLanguage,
+        p_exercise_type: currentExercise.type,
+        p_question: currentExercise.question || currentExercise.text || 'Exercise',
+        p_correct_answer: typeof currentExercise.answer === 'object' ? JSON.stringify(currentExercise.answer) : String(currentExercise.answer || ''),
+        p_user_answer: typeof answer === 'object' ? JSON.stringify(answer) : String(answer || ''),
+        p_is_correct: isCorrect,
+        p_time_spent: null,
+        p_error_type: null
       })
 
-      if (!isCorrect) {
-        // Record common mistake
-        const { data: existing } = await supabase
-          .from('common_mistakes')
-          .select('*')
-          .eq('exercise_id', currentExercise.id || `${lessonId}-${currentExerciseIndex}`)
-          .eq('wrong_answer', answer)
-          .single()
-
-        if (existing) {
-          await supabase
-            .from('common_mistakes')
-            .update({ occurrence_count: existing.occurrence_count + 1 })
-            .eq('id', existing.id)
-        } else {
-          await supabase.from('common_mistakes').insert({
-            exercise_id: currentExercise.id || `${lessonId}-${currentExerciseIndex}`,
-            exercise_type: currentExercise.type,
-            correct_answer: currentExercise.answer,
-            wrong_answer: answer,
-            occurrence_count: 1,
-            language: learningLanguage
-          })
-        }
+      // 2. Fallback to direct insert if RPC failed (likely function not created)
+      if (rpcError) {
+        console.warn('RPC log_exercise_attempt failed, falling back to direct insert:', rpcError)
+        await supabase.from('exercise_attempts').insert({
+          user_id: profile.id,
+          exercise_id: currentExercise.id || `${lessonId}-${currentExerciseIndex}`,
+          lesson_id: lessonId,
+          language: learningLanguage,
+          exercise_type: currentExercise.type,
+          question: currentExercise.question || currentExercise.text || 'Exercise',
+          correct_answer: typeof currentExercise.answer === 'object' ? JSON.stringify(currentExercise.answer) : String(currentExercise.answer || ''),
+          user_answer: typeof answer === 'object' ? JSON.stringify(answer) : String(answer || ''),
+          is_correct: isCorrect
+        })
       }
     } catch (err) {
       console.error('Failed to record attempt:', err)
@@ -109,7 +121,7 @@ function Lesson() {
 
     if (currentExercise.type === 'matching') {
       // Check if completed without mistakes
-      correct = selectedAnswer?.completed === true && selectedAnswer?.mistakes === 0
+      correct = selectedAnswer?.completed === true
     } else if (currentExercise.type === 'translation' || currentExercise.type === 'fillBlank') {
       correct = selectedAnswer === currentExercise.answer
     } else if (currentExercise.type === 'multipleChoice') {
@@ -123,8 +135,10 @@ function Lesson() {
     if (correct) {
       setXpEarned((prev) => prev + 10)
       setCorrectAnswers((prev) => prev + 1)
+      playCorrect()
     } else {
       loseHeart()
+      playError()
     }
   }
 
@@ -134,13 +148,14 @@ function Lesson() {
       return
     }
 
-    if (currentExerciseIndex < lesson.exercises.length - 1) {
+    if (currentExerciseIndex < shuffledExercises.length - 1) {
       setCurrentExerciseIndex((prev) => prev + 1)
       setSelectedAnswer(null)
       setIsChecked(false)
       setIsCorrect(false)
     } else {
-      // Lesson complete
+      // Lesson complete - play celebration sound
+      playComplete()
       const newXp = (profile?.xp || 0) + xpEarned
       const lessonKey = `${learningLanguage}-${lessonId}`
       const newCompletedLessons = Array.from(new Set([...(profile?.completed_lessons || []), lessonKey]))
@@ -156,12 +171,63 @@ function Lesson() {
         completed_lessons: newCompletedLessons
       }).catch(err => console.error('Failed to sync progress:', err))
 
+      // Trigger Milestones
+      if (newCompletedLessons.length === 1) {
+        triggerMilestone(profile.id, 'first_lesson')
+      }
+      if (newXp >= 50) {
+        triggerMilestone(profile.id, 'milestone_50xp')
+      }
+
       setShowResults(true)
     }
   }
 
   const handleExit = () => {
     navigate('/learn')
+  }
+
+  const handleOpenBox = () => {
+    if (boxState !== 'closed') return
+    playClick()
+    setBoxState('opening')
+
+    // Tiered rewards based on lesson context
+    let minGems = 3
+    let maxGems = 25
+
+    // Check if it's a unit or section completion (based on lessonId/unitId naming conventions)
+    const isUnitComplete = lessonId?.toString().toLowerCase().includes('final') ||
+      lessonId?.toString().toLowerCase().includes('unit')
+    const isSectionComplete = lessonId?.toString().toLowerCase().includes('section')
+
+    if (isSectionComplete) {
+      minGems = 100
+      maxGems = 500
+    } else if (isUnitComplete) {
+      minGems = 50
+      maxGems = 300
+    } else {
+      // Standard lesson rewards: 3, 10, 15, max 25
+      const options = [3, 10, 15, 25]
+      const reward = options[Math.floor(Math.random() * options.length)]
+
+      setTimeout(() => {
+        setBoxReward(reward)
+        addGems(reward)
+        setBoxState('opened')
+        playComplete()
+      }, 1200)
+      return
+    }
+
+    setTimeout(() => {
+      const reward = Math.floor(Math.random() * (maxGems - minGems + 1)) + minGems
+      setBoxReward(reward)
+      addGems(reward)
+      setBoxState('opened')
+      playComplete()
+    }, 1200)
   }
 
   if (showResults) {
@@ -183,6 +249,45 @@ function Lesson() {
               </p>
               <p className="text-gray-400 text-xs font-black uppercase tracking-widest mt-1">Accuracy</p>
             </div>
+          </div>
+
+          {/* Mystery Box Reward */}
+          <div className="mb-8 p-6 bg-gradient-to-b from-brand-secondary/5 to-brand-secondary/20 rounded-3xl border-2 border-brand-secondary/30 relative overflow-hidden group">
+            <h3 className="text-brand-secondary font-black text-sm uppercase tracking-widest mb-4">Mystery Reward!</h3>
+
+            <div
+              onClick={handleOpenBox}
+              className={`relative cursor-pointer transition-all duration-500 transform ${boxState === 'closed' ? 'hover:scale-110' : ''}`}
+            >
+              {boxState === 'closed' && (
+                <div className="text-7xl animate-bounce-slow drop-shadow-xl select-none">🎁</div>
+              )}
+
+              {boxState === 'opening' && (
+                <div className="text-7xl animate-ping opacity-75 select-none">🎁</div>
+              )}
+
+              {boxState === 'opened' && (
+                <div className="animate-bounce-in">
+                  <div className="text-6xl mb-2 drop-shadow-lg select-none">💎</div>
+                  <p className="text-brand-secondary font-black text-3xl animate-pulse">+{boxReward}</p>
+                  <p className="text-gray-400 text-xs font-black uppercase tracking-widest">Diamonds Found!</p>
+                </div>
+              )}
+
+              {boxState === 'closed' && (
+                <p className="mt-4 text-brand-secondary font-black text-xs uppercase tracking-widest animate-pulse">Tap to open!</p>
+              )}
+            </div>
+
+            {/* Sparkle effects for opened state */}
+            {boxState === 'opened' && (
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-1/2 left-1/4 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+                <div className="absolute top-1/3 left-3/4 w-3 h-3 bg-blue-400 rounded-full animate-ping delay-75"></div>
+                <div className="absolute top-2/3 left-1/2 w-2 h-2 bg-purple-400 rounded-full animate-ping delay-150"></div>
+              </div>
+            )}
           </div>
 
           <button

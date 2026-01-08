@@ -149,7 +149,7 @@ function LegalTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="w-10 h-10 border-4 border-brand-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }

@@ -6,6 +6,8 @@ function UsersTab({ users, onToggleAdmin, onDeleteUser, onRefresh }) {
   const [filterLanguage, setFilterLanguage] = useState('')
   const [sortBy, setSortBy] = useState('created_at')
   const [selectedUser, setSelectedUser] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // User to delete
+  const [confirmText, setConfirmText] = useState('')
 
   // Get unique languages
   const languages = [...new Set(users.map(u => u.learning_language).filter(Boolean))]
@@ -86,7 +88,7 @@ function UsersTab({ users, onToggleAdmin, onDeleteUser, onRefresh }) {
               <tr>
                 <th className="text-left p-4 text-text-alt font-medium">User</th>
                 <th className="text-left p-4 text-text-alt font-medium">Stats</th>
-                <th className="text-left p-4 text-text-alt font-medium">Language</th>
+                <th className="text-left p-4 text-text-alt font-medium">Native</th>
                 <th className="text-left p-4 text-text-alt font-medium">Joined</th>
                 <th className="text-left p-4 text-text-alt font-medium">Role</th>
                 <th className="text-left p-4 text-text-alt font-medium">Actions</th>
@@ -132,8 +134,8 @@ function UsersTab({ users, onToggleAdmin, onDeleteUser, onRefresh }) {
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-sm rounded-full capitalize">
-                      {user.learning_language || 'Not set'}
+                    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 text-sm rounded-full capitalize">
+                      {user.native_language || 'Not set'}
                     </span>
                   </td>
                   <td className="p-4 text-text-alt text-sm">
@@ -160,7 +162,10 @@ function UsersTab({ users, onToggleAdmin, onDeleteUser, onRefresh }) {
                         <Eye size={18} />
                       </button>
                       <button
-                        onClick={() => onDeleteUser(user.id)}
+                        onClick={() => {
+                          setDeleteConfirm(user)
+                          setConfirmText('')
+                        }}
                         className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                         title="Delete User"
                       >
@@ -177,8 +182,8 @@ function UsersTab({ users, onToggleAdmin, onDeleteUser, onRefresh }) {
 
       {/* User Detail Modal */}
       {selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-bg-card dark:bg-[#131f24] rounded-xl w-full max-w-lg shadow-xl border-2 border-border-main dark:border-[#37464f]">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-md" style={{ margin: 0, padding: '1rem' }}>
+          <div className="bg-bg-card dark:bg-[#131f24] rounded-[32px] w-full max-w-lg shadow-2xl border-2 border-border-main dark:border-[#37464f] max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b border-border-main flex items-center justify-between">
               <h2 className="text-lg font-bold text-text-main">User Details</h2>
               <button
@@ -232,11 +237,40 @@ function UsersTab({ users, onToggleAdmin, onDeleteUser, onRefresh }) {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-text-alt">Native Language</span>
-                  <span className="text-text-main capitalize">{selectedUser.native_language || 'Not set'}</span>
+                  <span className="text-text-main capitalize font-black">{selectedUser.native_language || 'Not set'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-text-alt">Learning</span>
-                  <span className="text-text-main capitalize">{selectedUser.learning_language || 'Not set'}</span>
+                  <span className="text-text-alt">Active Course</span>
+                  <span className="text-text-main capitalize font-black text-brand-primary">{selectedUser.learning_language || 'Not set'}</span>
+                </div>
+
+                {/* Multiple Learning Languages - ensuring we show at least the current one */}
+                <div className="mt-4 pt-4 border-t border-border-main">
+                  <h4 className="text-sm font-black text-text-main uppercase tracking-widest mb-3">All Languages Learning</h4>
+                  <div className="space-y-2">
+                    {/* Map language_progress if it exists, otherwise fallback to at least showing the learning_language */}
+                    {selectedUser.language_progress && selectedUser.language_progress.length > 0 ? (
+                      selectedUser.language_progress.map((lang, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-sm bg-bg-alt dark:bg-[#202f36] p-3 rounded-2xl border-2 border-border-main">
+                          <div className="flex items-center gap-2">
+                            <span className="text-text-main capitalize font-bold">{lang.code}</span>
+                            {lang.code === selectedUser.learning_language && (
+                              <span className="text-[10px] bg-brand-primary/20 text-brand-primary px-2 py-0.5 rounded-full font-black uppercase">Active</span>
+                            )}
+                          </div>
+                          <span className="text-yellow-500 font-black">Section {lang.currentSection || 0}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex justify-between items-center text-sm bg-bg-alt dark:bg-[#202f36] p-3 rounded-2xl border-2 border-border-main">
+                        <div className="flex items-center gap-2">
+                          <span className="text-text-main capitalize font-bold">{selectedUser.learning_language || 'Not set'}</span>
+                          <span className="text-[10px] bg-brand-primary/20 text-brand-primary px-2 py-0.5 rounded-full font-black uppercase">Active</span>
+                        </div>
+                        <span className="text-yellow-500 font-black">Section 0</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-text-alt">Lessons Completed</span>
@@ -291,7 +325,71 @@ function UsersTab({ users, onToggleAdmin, onDeleteUser, onRefresh }) {
           </div>
         </div>
       )}
-    </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[110] backdrop-blur-md" style={{ margin: 0, padding: '1rem' }}>
+          <div className="bg-bg-card dark:bg-[#131f24] rounded-[32px] w-full max-w-md border-2 border-red-500/30 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b-2 border-border-main flex items-center justify-between">
+              <h2 className="text-xl font-black text-red-500 uppercase tracking-wide">⚠️ Delete User</h2>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="p-2 hover:bg-bg-alt rounded-lg text-text-alt hover:text-text-main"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-text-main font-bold">
+                You are about to permanently delete the user:
+              </p>
+              <div className="bg-red-500/10 p-4 rounded-2xl border-2 border-red-500/20">
+                <p className="font-black text-red-400">{deleteConfirm.username}</p>
+                <p className="text-sm text-text-alt">{deleteConfirm.email}</p>
+              </div>
+
+              <p className="text-text-alt text-sm">
+                This action cannot be undone. Type <span className="font-black text-red-500">{deleteConfirm.username}</span> to confirm:
+              </p>
+
+              <input
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={`Type ${deleteConfirm.username} to confirm`}
+                className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-red-500 text-center uppercase tracking-widest"
+              />
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 duo-btn duo-btn-white"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirmText.toLowerCase() === deleteConfirm.username.toLowerCase()) {
+                      onDeleteUser(deleteConfirm.id)
+                      setDeleteConfirm(null)
+                      setConfirmText('')
+                    }
+                  }}
+                  disabled={confirmText.toLowerCase() !== deleteConfirm.username.toLowerCase()}
+                  className={`flex-1 py-3 rounded-2xl font-black uppercase tracking-widest transition-all ${confirmText.toLowerCase() === deleteConfirm.username.toLowerCase()
+                    ? 'bg-red-500 text-white hover:bg-red-600 shadow-[0_4px_0_0_#b91c1c]'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                >
+                  DELETE USER
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div >
   )
 }
 

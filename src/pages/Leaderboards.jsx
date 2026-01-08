@@ -7,14 +7,13 @@ import { Trophy, Medal, Crown, TrendingUp, TrendingDown, Minus } from 'lucide-re
 
 function Leaderboards() {
   const { profile } = useAuth()
-  const { xp, currentLeague: currentLeagueId } = useStore()
+  const { xp } = useStore()
   const [leaderboardData, setLeaderboardData] = useState([])
   const [loading, setLoading] = useState(true)
-
-  const currentLeague = getLeagueById(currentLeagueId)
+  const leagueId = profile?.league_id || 1
+  const currentLeague = getLeagueById(leagueId)
 
   // Calculate zones based on the current league's rules and active user count
-  // For simplicity, we'll use fixed numbers or a percentage of the fetched cohort
   const zones = {
     promotion: currentLeague.promoteTop,
     demotion: currentLeague.demoteBottom
@@ -24,10 +23,11 @@ function Leaderboards() {
     const fetchLeaderboard = async () => {
       setLoading(true)
       try {
-        // Fetch top 50 users sorted by XP
+        // Fetch users in the same league sorted by XP
         const { data: users, error } = await supabase
           .from('profiles')
-          .select('id, username, xp, avatar_url')
+          .select('id, username, xp, avatar_url, league_id')
+          .eq('league_id', leagueId)
           .order('xp', { ascending: false })
           .limit(50)
 
@@ -39,7 +39,7 @@ function Leaderboards() {
             ...u,
             rank: index + 1,
             isCurrentUser: u.id === profile?.id,
-            avatar: u.avatar_url || '👤' // Basic fallback if no avatar, but no fake data
+            avatar: u.avatar_url || '👤'
           }))
           setLeaderboardData(formatted)
         }
@@ -50,8 +50,10 @@ function Leaderboards() {
       }
     }
 
-    fetchLeaderboard()
-  }, [profile, xp])
+    if (profile?.id) {
+      fetchLeaderboard()
+    }
+  }, [profile, xp, leagueId])
 
   const currentUser = leaderboardData.find(u => u.isCurrentUser)
 
@@ -108,24 +110,25 @@ function Leaderboards() {
             <span className="text-brand-primary text-sm font-black tracking-widest">PROMOTION ZONE</span>
           </div>
 
-          {leaderboardData.slice(0, zones.promotion).map((user) => (
+          {leaderboardData.slice(0, zones.promotion).map((u) => (
             <div
-              key={user.rank}
-              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main ${user.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary' : 'bg-brand-primary/5'
+              key={u.id}
+              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2' : ''
                 }`}
             >
               <div className="w-8 flex justify-center">
-                {getRankBadge(user.rank)}
+                {getRankBadge(u.rank)}
               </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-[#58cc02] to-blue-500 rounded-full flex items-center justify-center text-xl shadow-sm border-2 border-white dark:border-[#37464f]">
-                {user.avatar}
+              <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center overflow-hidden border-2 border-border-main shadow-sm">
+                {u.avatar_url ? (
+                  <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl">👤</span>
+                )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-gray-900 dark:text-white font-black truncate">{user.username}{user.isCurrentUser ? ' (You)' : ''}</p>
-                <p className="text-gray-500 dark:text-gray-400 text-sm font-bold truncate">{user.xp.toLocaleString()} XP</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {getTrendIcon(user.trend)}
+                <p className="text-gray-900 dark:text-white font-black truncate text-sm md:text-base">{u.username}{u.isCurrentUser ? ' (You)' : ''}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-bold truncate">{u.xp.toLocaleString()} XP</p>
               </div>
             </div>
           ))}
@@ -135,21 +138,25 @@ function Leaderboards() {
             <span className="text-gray-600 dark:text-gray-400 text-sm font-black tracking-widest">SAFE ZONE</span>
           </div>
 
-          {leaderboardData.slice(zones.promotion, Math.max(zones.promotion, leaderboardData.length - zones.demotion)).map((user) => (
+          {leaderboardData.slice(zones.promotion, Math.max(zones.promotion, leaderboardData.length - zones.demotion)).map((u) => (
             <div
-              key={user.rank}
-              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main ${user.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary' : ''
+              key={u.id}
+              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2' : ''
                 }`}
             >
               <div className="w-8 flex justify-center">
-                <span className="text-gray-500 dark:text-gray-400 font-bold text-lg">{user.rank}</span>
+                <span className="text-gray-500 dark:text-gray-400 font-bold text-lg">{u.rank}</span>
               </div>
-              <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center text-xl shadow-sm border-2 border-border-main">
-                {user.avatar}
+              <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center overflow-hidden border-2 border-border-main shadow-sm">
+                {u.avatar_url ? (
+                  <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl">👤</span>
+                )}
               </div>
               <div className="flex-1">
-                <p className="text-text-main font-black">{user.username}{user.isCurrentUser ? ' (You)' : ''}</p>
-                <p className="text-text-alt text-sm font-bold">{user.xp.toLocaleString()} XP</p>
+                <p className="text-text-main font-black text-sm md:text-base">{u.username}{u.isCurrentUser ? ' (You)' : ''}</p>
+                <p className="text-text-alt text-xs md:text-sm font-bold">{u.xp.toLocaleString()} XP</p>
               </div>
             </div>
           ))}
@@ -160,24 +167,25 @@ function Leaderboards() {
             </div>
           )}
 
-          {leaderboardData.length > 0 && leaderboardData.slice(Math.max(0, leaderboardData.length - zones.demotion)).map((user) => (
+          {leaderboardData.length > 0 && leaderboardData.slice(Math.max(0, leaderboardData.length - zones.demotion)).map((u) => (
             <div
-              key={user.rank}
-              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main last:border-b-0 ${user.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary' : 'bg-red-500/5'
+              key={u.id}
+              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main last:border-b-0 transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2' : ''
                 }`}
             >
               <div className="w-8 flex justify-center">
-                <span className="text-gray-500 dark:text-gray-400 font-bold text-lg">{user.rank}</span>
+                <span className="text-gray-500 dark:text-gray-400 font-bold text-lg">{u.rank}</span>
               </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-xl shadow-sm border-2 border-white dark:border-[#37464f]">
-                {user.avatar}
+              <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center overflow-hidden border-2 border-border-main shadow-sm">
+                {u.avatar_url ? (
+                  <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xl">👤</span>
+                )}
               </div>
               <div className="flex-1">
-                <p className="text-gray-900 dark:text-white font-black">{user.username}{user.isCurrentUser ? ' (You)' : ''}</p>
-                <p className="text-gray-500 dark:text-gray-400 text-sm font-bold">{user.xp.toLocaleString()} XP</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {getTrendIcon(user.trend)}
+                <p className="text-gray-900 dark:text-white font-black text-sm md:text-base">{u.username}{u.isCurrentUser ? ' (You)' : ''}</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-bold">{u.xp.toLocaleString()} XP</p>
               </div>
             </div>
           ))}
@@ -216,6 +224,36 @@ function Leaderboards() {
           </div>
         </div>
       </div>
+      {/* Sticky Bottom Rank Bar */}
+      {currentUser && (
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 lg:right-80 bg-bg-card/95 backdrop-blur-md border-t-4 border-brand-primary/20 z-40 px-6 py-4 animate-slide-up shadow-[0_-8px_30px_rgb(0,0,0,0.12)]">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center font-black text-lg shadow-lg shadow-brand-primary/20">
+                #{currentUser.rank}
+              </div>
+              <div>
+                <p className="text-text-main font-black leading-none mb-1">YOU</p>
+                <p className="text-text-alt text-xs font-bold uppercase tracking-widest">{currentUser.xp.toLocaleString()} XP</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end">
+              <p className={`font-black text-xs uppercase tracking-[0.2em] px-3 py-1 rounded-full ${currentUser.rank <= zones.promotion ? 'bg-emerald-500/10 text-emerald-500' :
+                currentUser.rank > leaderboardData.length - zones.demotion ? 'bg-red-500/10 text-red-500' :
+                  'bg-gray-500/10 text-gray-500'
+                }`}>
+                {currentUser.rank <= zones.promotion ? 'Promotion' :
+                  currentUser.rank > leaderboardData.length - zones.demotion ? 'Demotion' :
+                    'Safe'}
+              </p>
+              <p className="text-text-alt text-[10px] font-black uppercase tracking-widest mt-1">
+                {currentUser.rank <= zones.promotion ? 'Top 10 advance' : 'Keep pushing!'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

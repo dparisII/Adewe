@@ -1,153 +1,187 @@
-import { Target, Zap, Clock, Trophy, Gift, CheckCircle } from 'lucide-react'
+import { Zap, Clock, Trophy, Gift, CheckCircle, Flame, Star, Crown, ChevronRight, Volume2, Mic2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import useStore from '../store/useStore'
-import { generateDailyQuests, generateWeeklyQuests, updateQuestProgressByAction } from '../data/questsData'
+import { generateDailyQuests, generateWeeklyQuests } from '../data/questsData'
 
 function Quests() {
   const { profile } = useAuth()
-  const { xp, streak, completedLessons, activeQuests, setActiveQuests, updateQuestProgress, completeQuest, addGems } = useStore()
+  const { xp, streak, activeQuests, setActiveQuests, completeQuest, addGems, monthlyChallenge } = useStore()
+
   const [dailyQuests, setDailyQuests] = useState([])
-  const [weeklyQuests, setWeeklyQuests] = useState([])
+  const [timeLeft, setTimeLeft] = useState('')
 
   useEffect(() => {
-    // Generate quests if none exist
+    const updateTimer = () => {
+      const now = new Date()
+      const endOfDay = new Date()
+      endOfDay.setHours(23, 59, 59, 999)
+      const diff = endOfDay - now
+
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      setTimeLeft(`${hours} HOURS ${minutes} MINUTES`)
+    }
+
+    updateTimer()
+    const timer = setInterval(updateTimer, 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
     if (!activeQuests || activeQuests.length === 0) {
       const daily = generateDailyQuests(profile?.id || 'guest', 3)
-      const weekly = generateWeeklyQuests(2)
+      const weekly = generateWeeklyQuests(profile?.id || 'guest', 2)
       setActiveQuests([...daily, ...weekly])
     }
-  }, [profile])
+  }, [profile, activeQuests, setActiveQuests])
 
   useEffect(() => {
-    // Separate daily and weekly quests from active quests
     if (activeQuests) {
       setDailyQuests(activeQuests.filter(q => !q.isWeekly))
-      setWeeklyQuests(activeQuests.filter(q => q.isWeekly))
     }
   }, [activeQuests])
 
-  const handleClaimReward = (quest) => {
-    addGems(quest.gemReward)
-    completeQuest(quest.id)
+  // Get months remaining time
+  const getMonthlyTimeLeft = () => {
+    if (!monthlyChallenge) return ''
+    const now = new Date()
+    const expiry = new Date(monthlyChallenge.expiresAt)
+    const diff = expiry - now
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    return `${days} DAYS LEFT`
   }
 
-
-  const getProgressColor = (color) => {
-    const colors = {
-      yellow: 'bg-yellow-500',
-      green: 'bg-green-500',
-      blue: 'bg-blue-500',
-      purple: 'bg-purple-500',
-      orange: 'bg-orange-500',
-      red: 'bg-red-500',
-    }
-    return colors[color] || 'bg-brand-primary'
+  const getQuestIcon = (type) => {
+    if (type === 'xp') return <Zap className="text-yellow-400 fill-yellow-400" size={24} />
+    if (type?.includes('time') || type?.includes('minutes')) return <Clock className="text-blue-400" size={24} />
+    if (type?.includes('listen') || type?.includes('exercises')) return <Volume2 className="text-blue-400" size={24} />
+    return <Star className="text-brand-primary" size={24} />
   }
 
-  const getQuestIcon = (category) => {
-    const icons = {
-      daily_practice: <Target className="text-brand-primary" size={24} />,
-      skill_building: <Trophy className="text-purple-400" size={24} />,
-      achievements: <Zap className="text-yellow-400" size={24} />,
-      challenges: <Clock className="text-blue-400" size={24} />,
-      special: <Gift className="text-orange-400" size={24} />,
-    }
-    return icons[category] || <Target className="text-gray-400" size={24} />
-  }
-
-  const QuestCard = ({ quest }) => {
-    const progress = (quest.progress / quest.target) * 100
-    const isComplete = quest.completed
-
-    return (
-      <div className={`bg-bg-card rounded-xl p-4 border-2 transition-colors duration-300 ${isComplete ? 'border-brand-primary' : 'border-border-main'}`}>
-        <div className="flex items-start gap-4">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isComplete ? 'bg-brand-primary/20' : 'bg-bg-alt'}`}>
-            {isComplete ? <CheckCircle className="text-brand-primary" size={24} /> : getQuestIcon(quest.category)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <h3 className={`font-black ${isComplete ? 'text-brand-primary' : 'text-gray-900 dark:text-white'}`}>{quest.name}</h3>
-              <div className="flex items-center gap-1 px-2 py-1 bg-bg-alt rounded-lg">
-                <Gift size={14} className="text-brand-primary" />
-                <span className="text-brand-primary text-sm font-bold">+{quest.gemReward}</span>
-              </div>
-            </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mb-3 font-medium">{quest.description}</p>
-            <div className="h-3 bg-bg-alt dark:bg-[#37464f] rounded-full overflow-hidden border border-black/5 dark:border-white/5">
-              <div
-                className="h-full bg-brand-primary rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-gray-500 dark:text-gray-400 text-xs font-black uppercase tracking-widest">
-                {quest.progress} / {quest.target}
-              </p>
-              {isComplete && (
-                <button
-                  onClick={() => handleClaimReward(quest)}
-                  className="px-3 py-1 bg-brand-primary text-white rounded-lg text-xs font-bold hover:brightness-110"
-                >
-                  Claim
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  const getChestIcon = (index) => {
+    const chests = ['🥉', '🥈', '🥇']
+    return <span className="text-2xl">{chests[index % 3]}</span>
   }
 
   return (
-    <div className="min-h-screen md:p-8 pb-24 md:pb-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Target className="text-orange-400" size={40} />
-          </div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">Daily Quests</h1>
-          <p className="text-gray-500 dark:text-gray-400 font-bold">Complete quests to earn bonus gems</p>
-        </div>
+    <div className="min-h-screen bg-bg-main p-4 md:p-8 pb-32">
+      <div className="max-w-2xl mx-auto space-y-8">
 
-        {/* Daily Quests */}
-        <div className="mb-8">
+        {/* Monthly Challenge Section */}
+        {monthlyChallenge && (
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-[24px] p-6 text-white relative overflow-hidden shadow-lg">
+            <div className="relative z-10">
+              <div className="inline-block bg-white text-purple-600 px-3 py-1 rounded-lg text-xs font-black mb-3">
+                {new Date().toLocaleString('default', { month: 'long' }).toUpperCase()}
+              </div>
+
+              <h1 className="text-2xl font-black mb-1">{monthlyChallenge.title}</h1>
+
+              <div className="flex items-center gap-2 text-white/80 text-sm font-bold mb-6">
+                <Clock size={16} />
+                <span>{getMonthlyTimeLeft()}</span>
+              </div>
+
+              <div className="bg-black/20 rounded-2xl p-5 border border-white/10">
+                <p className="text-white font-bold mb-3">{monthlyChallenge.description}</p>
+
+                <div className="relative h-8 bg-black/40 rounded-full p-1 group">
+                  {/* Progress Fill */}
+                  <div
+                    className="h-full bg-yellow-400 rounded-full transition-all duration-1000 relative"
+                    style={{ width: `${(monthlyChallenge.progress / monthlyChallenge.target) * 100}%` }}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black italic text-black">
+                      {monthlyChallenge.progress} / {monthlyChallenge.target}
+                    </div>
+                  </div>
+
+                  {/* Character Icon at the end of progress */}
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 -ml-4 transition-all duration-1000"
+                    style={{ left: `${(monthlyChallenge.progress / monthlyChallenge.target) * 100}%` }}
+                  >
+                    <div className="w-10 h-10 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center text-xl shadow-xl">
+                      {monthlyChallenge.icon}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-8 translate-x-8"></div>
+          </div>
+        )}
+
+        {/* Daily Quests Section */}
+        <section className="space-y-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">Today's Quests</h2>
-            <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Resets in 12h 30m</span>
-          </div>
-          <div className="space-y-4">
-            {dailyQuests.map((quest) => (
-              <QuestCard key={quest.id} quest={quest} />
-            ))}
-          </div>
-        </div>
-
-        {/* Weekly Quests */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-wide">Weekly Challenges</h2>
-            <span className="text-gray-500 dark:text-gray-400 text-sm font-bold">Resets in 5 days</span>
-          </div>
-          <div className="space-y-4">
-            {weeklyQuests.map((quest) => (
-              <QuestCard key={quest.id} quest={quest} />
-            ))}
-          </div>
-        </div>
-
-        {/* Bonus Info */}
-        <div className="mt-8 bg-brand-primary/10 rounded-xl p-4 border border-brand-primary/30 transition-colors duration-300">
-          <div className="flex items-center gap-3">
-            <Gift className="text-brand-primary" size={24} />
-            <div>
-              <p className="text-gray-900 dark:text-white font-bold">Complete all daily quests</p>
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Earn a bonus chest with extra rewards!</p>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white">Daily Quests</h2>
+            <div className="flex items-center gap-2 text-[#ff9600] font-black text-sm">
+              <Clock size={18} />
+              <span>{timeLeft}</span>
             </div>
           </div>
+
+          <div className="bg-bg-card rounded-2xl border-2 border-border-main divide-y-2 divide-border-main overflow-hidden shadow-sm">
+            {dailyQuests.map((quest, index) => {
+              const progress = (quest.progress / quest.target) * 100
+
+              return (
+                <div key={quest.id} className="p-5 flex items-center gap-4 hover:bg-bg-alt/30 transition-colors">
+                  <div className="w-14 h-14 bg-bg-alt rounded-2xl flex items-center justify-center border-2 border-border-main shadow-inner">
+                    {getQuestIcon(quest.type)}
+                  </div>
+
+                  <div className="flex-1">
+                    <h3 className="text-[17px] font-black text-gray-900 dark:text-white mb-2 leading-tight">
+                      {quest.title}
+                    </h3>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-4 bg-gray-200 dark:bg-[#37464f] rounded-full overflow-hidden relative border border-black/5">
+                        <div
+                          className="h-full bg-brand-primary transition-all duration-1000"
+                          style={{ width: `${Math.min(progress, 100)}%` }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white mix-blend-difference">
+                          {quest.progress} / {quest.target}
+                        </div>
+                      </div>
+
+                      <div className="flex-shrink-0 grayscale-[0.5] hover:grayscale-0 transition-all">
+                        {getChestIcon(index)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {quest.progress >= quest.target && !quest.claimed && (
+                    <div className="ml-2">
+                      <div className="w-8 h-8 bg-brand-primary rounded-full flex items-center justify-center animate-bounce shadow-lg">
+                        <CheckCircle size={18} className="text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        <div className="bg-bg-card rounded-2xl p-5 border-2 border-border-main border-dashed flex items-center justify-between group cursor-pointer hover:border-brand-primary/50 transition-all">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
+              <Flame size={20} />
+            </div>
+            <div>
+              <p className="font-black text-gray-900 dark:text-white">Quest Streak</p>
+              <p className="text-xs text-text-alt font-bold">Complete all to earn bonus gems!</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-gray-400 group-hover:text-brand-primary transition-all" />
         </div>
+
       </div>
     </div>
   )

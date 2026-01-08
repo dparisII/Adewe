@@ -1,14 +1,34 @@
 import { useNavigate } from 'react-router-dom'
-import { Flame, Heart, Gem, Trophy, Target, Calendar, BookOpen, LogOut, Settings, Sun, Moon, Plus, Globe, Check, X, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import {
+  Flame, Heart, Gem, Trophy, Target, Calendar, BookOpen, LogOut, Settings, Edit, User, Globe, Star, Shield, ArrowRight,
+  Plus, Search, Mail, Lock, Camera, Check, X, Trash2, Edit2, UserPlus, Sun, Moon, UserCheck
+} from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import useStore from '../store/useStore'
 import useThemeStore from '../store/useThemeStore'
 import { getLanguage, languages, getOtherLanguages } from '../data/languages'
+import { supabase } from '../lib/supabase'
+import Modal from '../components/Modal'
+
+const AVATAR_OPTIONS = [
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=FelixCode',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Lilly',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Toby',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Jack',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Misty',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Sugar',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Shadow',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Simba',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Leo',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Milo',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Luna',
+]
 
 function Profile() {
   const navigate = useNavigate()
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, updateProfile } = useAuth()
   const {
     xp,
     streak,
@@ -24,9 +44,152 @@ function Profile() {
     switchLearningLanguage,
     removeLearningLanguage,
     resetProgress,
+    setProfileDetails,
+    bio: storeBio
   } = useStore()
 
+  const [followerCount, setFollowerCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [isEditing, setIsEditing] = useState(false)
   const [showAddLanguageModal, setShowAddLanguageModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [showSearch, setShowSearch] = useState(false)
+  const [followingIds, setFollowingIds] = useState(new Set())
+  const [searching, setSearching] = useState(false)
+
+  // Edit form state
+  const [editName, setEditName] = useState(profile?.username || '')
+  const [editBio, setEditBio] = useState(storeBio || '')
+  const [editAvatar, setEditAvatar] = useState(profile?.avatar_url || '')
+  const [editEmail, setEditEmail] = useState(user?.email || '')
+  const [editPassword, setEditPassword] = useState('')
+  const [savingSettings, setSavingSettings] = useState(false)
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchFollowStats()
+      fetchFollowing()
+    }
+  }, [profile?.id])
+
+  const fetchFollowStats = async () => {
+    try {
+      const { count: followers } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('followed_id', profile.id)
+
+      const { count: following } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', profile.id)
+
+      setFollowerCount(followers || 0)
+      setFollowingCount(following || 0)
+    } catch (err) {
+      console.error('Error fetching follow stats:', err)
+    }
+  }
+
+  const fetchFollowing = async () => {
+    try {
+      const { data } = await supabase
+        .from('user_follows')
+        .select('followed_id')
+        .eq('follower_id', profile.id)
+      setFollowingIds(new Set(data?.map(f => f.followed_id) || []))
+    } catch (err) {
+      console.error('Error fetching following:', err)
+    }
+  }
+
+  const handleSearch = async (e) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+    setSearching(true)
+    try {
+      // Search by username OR email
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`username.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .limit(10)
+
+      if (error) throw error
+      setSearchResults(data || [])
+    } catch (err) {
+      console.error('Error searching users:', err)
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const toggleFollow = async (targetUserId) => {
+    const isFollowing = followingIds.has(targetUserId)
+    try {
+      if (isFollowing) {
+        await supabase
+          .from('user_follows')
+          .delete()
+          .eq('follower_id', profile.id)
+          .eq('followed_id', targetUserId)
+        setFollowingIds(prev => {
+          const next = new Set(prev)
+          next.delete(targetUserId)
+          return next
+        })
+      } else {
+        await supabase
+          .from('user_follows')
+          .insert({ follower_id: profile.id, followed_id: targetUserId })
+        setFollowingIds(prev => new Set([...prev, targetUserId]))
+      }
+      fetchFollowStats()
+    } catch (err) {
+      console.error('Error toggling follow:', err)
+    }
+  }
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault()
+    setSavingSettings(true)
+    try {
+      // Update profile metadata
+      const { error: profileError } = await supabase.from('profiles').update({
+        username: editName,
+        avatar_url: editAvatar,
+        bio: editBio
+      }).eq('id', profile.id)
+
+      if (profileError) throw profileError
+
+      // Update bio in store
+      setProfileDetails({ bio: editBio })
+
+      // Update email/password if changed
+      if ((editEmail && editEmail !== user.email) || editPassword) {
+        const updates = {}
+        if (editEmail && editEmail !== user.email) updates.email = editEmail
+        if (editPassword) updates.password = editPassword
+
+        const { error: authError } = await supabase.auth.updateUser(updates)
+        if (authError) throw authError
+
+        if (editEmail && editEmail !== user.email) {
+          alert('Check your new email address for a confirmation link!')
+        }
+      }
+
+      setIsEditing(false)
+      setEditPassword('')
+    } catch (err) {
+      console.error('Error saving settings:', err)
+      alert(err.message || 'Failed to save settings')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
 
   const targetLanguage = getLanguage(learningLanguage)
   const sourceLanguage = getLanguage(nativeLanguage)
@@ -38,13 +201,11 @@ function Profile() {
     try {
       await signOut()
       resetProgress()
-      // Clear any remaining local storage items
       localStorage.removeItem('adewe-storage')
       localStorage.removeItem('adewe-theme')
       navigate('/', { replace: true })
     } catch (error) {
       console.error('Error signing out:', error)
-      // Fallback navigation
       navigate('/', { replace: true })
     }
   }
@@ -106,354 +267,438 @@ function Profile() {
     },
   ]
 
-  const achievements = [
-    {
-      id: 1,
-      title: 'First Steps',
-      description: 'Complete your first lesson',
-      icon: '🎯',
-      unlocked: completedLessons.length >= 1,
-    },
-    {
-      id: 2,
-      title: 'Getting Started',
-      description: 'Complete 5 lessons',
-      icon: '📚',
-      unlocked: completedLessons.length >= 5,
-    },
-    {
-      id: 3,
-      title: 'Dedicated Learner',
-      description: 'Complete 10 lessons',
-      icon: '🌟',
-      unlocked: completedLessons.length >= 10,
-    },
-    {
-      id: 4,
-      title: 'XP Hunter',
-      description: 'Earn 100 XP',
-      icon: '💎',
-      unlocked: xp >= 100,
-    },
-    {
-      id: 5,
-      title: 'XP Master',
-      description: 'Earn 500 XP',
-      icon: '👑',
-      unlocked: xp >= 500,
-    },
-    {
-      id: 6,
-      title: 'Streak Starter',
-      description: 'Maintain a 3-day streak',
-      icon: '🔥',
-      unlocked: streak >= 3,
-    },
-  ]
-
   return (
-    <div className="min-h-screen md:p-8 pb-24 md:pb-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Profile Header */}
-        <div className="bg-gradient-to-r from-brand-primary to-brand-primary/80 rounded-2xl p-4 md:p-6 mb-6 md:mb-8 shadow-lg">
-          <div className="flex items-center gap-3 md:gap-4">
-            <div className="w-14 h-14 md:w-20 md:h-20 bg-white/20 rounded-full flex items-center justify-center text-2xl md:text-4xl shadow-inner">
-              {profile?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '👤'}
+    <div className="min-h-screen md:p-8 pb-32">
+      <div className="max-w-2xl mx-auto space-y-8">
+
+        {/* Profile Header Card */}
+        <div className="bg-bg-card border-2 border-border-main rounded-[24px] p-6 shadow-sm relative overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10">
+            {/* Avatar Section */}
+            <div className="relative group">
+              <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-4xl shadow-inner border-4 border-white dark:border-gray-900 overflow-hidden">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  profile?.username?.[0]?.toUpperCase() || '👤'
+                )}
+              </div>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-brand-primary text-white rounded-full flex items-center justify-center border-2 border-white dark:border-gray-900 shadow-lg hover:scale-110 transition-all"
+              >
+                <Edit2 size={14} />
+              </button>
             </div>
-            <div className="flex-1">
-              <h1 className="text-xl md:text-2xl font-black text-white">
-                {profile?.username || 'Language Learner'}
-              </h1>
-              <p className="text-white/80">{user?.email}</p>
-              <p className="text-white/60 text-sm">
-                Learning {targetLanguage?.name || 'a language'} from {sourceLanguage?.name || 'English'}
-              </p>
+
+            {/* Info Section */}
+            <div className="flex-1 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white leading-none">
+                  {profile?.username || 'Learner'}
+                </h1>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowSearch(true)}
+                    className="duo-btn duo-btn-blue text-xs px-4 py-2 flex items-center gap-2"
+                  >
+                    <UserPlus size={16} />
+                    FIND FRIENDS
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="duo-btn duo-btn-white text-xs px-4 py-2 border-2 border-border-main"
+                  >
+                    EDIT PROFILE
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-y-1 gap-x-4 text-text-alt font-bold text-sm mb-4">
+                <p>@{profile?.username?.toLowerCase().replace(/\s+/g, '')}</p>
+                <div className="flex items-center gap-1">
+                  <Calendar size={14} />
+                  Joined {new Date(profile?.created_at).toLocaleDateString()}
+                </div>
+              </div>
+
+              {storeBio && (
+                <p className="text-gray-600 dark:text-gray-400 text-sm italic mb-4 max-w-md">
+                  "{storeBio}"
+                </p>
+              )}
+
+              <div className="flex items-center justify-center sm:justify-start gap-6">
+                <div className="text-center sm:text-left">
+                  <p className="font-black text-gray-900 dark:text-white text-lg leading-none">{followerCount}</p>
+                  <p className="text-text-alt text-xs font-black uppercase tracking-widest">Followers</p>
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="font-black text-gray-900 dark:text-white text-lg leading-none">{followingCount}</p>
+                  <p className="text-text-alt text-xs font-black uppercase tracking-widest">Following</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className={`bg-bg-card rounded-xl p-4 border border-border-main shadow-sm hover:border-brand-primary/30 transition-all`}
-            >
-              <div className="flex items-center gap-3 mb-2">
+        <div className="grid grid-cols-2 gap-4">
+          {stats.map((stat, idx) => (
+            <div key={idx} className="bg-bg-card border-2 border-border-main rounded-2xl p-4 flex items-center gap-4 hover:border-brand-primary/30 transition-all">
+              <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 {stat.icon}
-                <span className="text-xl md:text-2xl font-black text-gray-900 dark:text-white">{stat.value}</span>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 text-sm font-bold">{stat.label}</p>
+              <div>
+                <p className="text-2xl font-black text-gray-900 dark:text-white leading-none mb-1">{stat.value}</p>
+                <p className="text-text-alt text-xs font-black uppercase tracking-widest leading-none">{stat.label}</p>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* Learning Languages */}
-        <div className="bg-bg-card rounded-xl p-4 md:p-6 mb-6 md:mb-8 border-2 border-border-main shadow-sm transition-colors duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-black text-gray-900 dark:text-white">Learning Languages</h2>
+        {/* Add Friends Section - Mockup 3 Style */}
+        <section className="bg-bg-card border-2 border-border-main rounded-[24px] p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-black text-gray-900 dark:text-white">Add friends</h2>
             <button
-              onClick={() => setShowAddLanguageModal(true)}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-brand-primary hover:bg-brand-primary/10 rounded-lg transition-colors"
+              onClick={() => setShowSearch(!showSearch)}
+              className="text-brand-primary font-black text-sm uppercase tracking-widest hover:underline"
             >
-              <Plus size={16} />
-              Add Language
+              {showSearch ? 'Close' : 'Find friends'}
             </button>
           </div>
 
-          {learningLanguages.length > 0 ? (
-            <div className="space-y-3">
-              {learningLanguages.map((lang) => {
-                const langInfo = getLanguage(lang.code)
-                const isActive = currentLearningLanguage === lang.code || learningLanguage === lang.code
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => setShowSearch(true)}
+              className="group flex items-center gap-4 p-4 bg-brand-primary/5 border-2 border-brand-primary/20 rounded-2xl hover:bg-brand-primary/10 transition-all"
+            >
+              <div className="w-12 h-12 bg-brand-primary rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                <Search size={24} />
+              </div>
+              <div className="text-left">
+                <p className="font-black text-gray-900 dark:text-white">Find friends</p>
+                <p className="text-xs text-text-alt font-bold">Search by name</p>
+              </div>
+            </button>
 
-                return (
-                  <div
-                    key={lang.code}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border-2 transition-all gap-4 ${isActive ? 'border-brand-primary bg-brand-primary/5' : 'border-border-main hover:border-border-main dark:hover:border-[#4b5a6a]'
-                      }`}
-                  >
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                      <span className="text-3xl flex-shrink-0">{langInfo?.flag}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-gray-900 dark:text-white font-black truncate">{langInfo?.name}</p>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm font-bold truncate">{langInfo?.nativeName}</p>
-                      </div>
-                      {isActive && (
-                        <span className="px-2 py-1 bg-brand-primary text-white text-xs rounded-full font-bold whitespace-nowrap flex-shrink-0">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                      {!isActive && (
-                        <button
-                          onClick={() => handleSwitchLanguage(lang.code)}
-                          className="px-3 py-2 text-sm text-brand-primary hover:bg-brand-primary/10 rounded-lg transition-colors flex-1 sm:flex-none text-center"
-                        >
-                          Switch
-                        </button>
-                      )}
-                      {learningLanguages.length > 1 && (
-                        <button
-                          onClick={() => handleRemoveLanguage(lang.code)}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
+            <button
+              onClick={() => {
+                const url = window.location.origin
+                navigator.clipboard.writeText(`Check out Adewe! Learning is fun here: ${url}`)
+                alert('Invite link copied to clipboard!')
+              }}
+              className="group flex items-center gap-4 p-4 bg-[#8000ff]/5 border-2 border-[#8000ff]/20 rounded-2xl hover:bg-[#8000ff]/10 transition-all"
+            >
+              <div className="w-12 h-12 bg-[#8000ff] rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                <UserPlus size={24} />
+              </div>
+              <div className="text-left">
+                <p className="font-black text-gray-900 dark:text-white">Invite friends</p>
+                <p className="text-xs text-text-alt font-bold">Share your link</p>
+              </div>
+            </button>
+          </div>
+
+          {/* Search Results / Interface */}
+          {showSearch && (
+            <div className="mt-8 space-y-6 pt-6 border-t border-border-main">
+              <form onSubmit={handleSearch} className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-alt" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search for users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-bg-alt border-2 border-border-main rounded-xl pl-12 pr-4 py-3 font-bold focus:border-brand-primary outline-none transition-all"
+                />
+              </form>
+
+              <div className="space-y-3">
+                {searching ? (
+                  <div className="flex justify-center p-8">
+                    <div className="w-8 h-8 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin"></div>
                   </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Globe className="mx-auto text-gray-400 mb-2" size={40} />
-              <p className="text-gray-500 dark:text-gray-400 font-bold">No languages added yet</p>
-              <button
-                onClick={() => setShowAddLanguageModal(true)}
-                className="mt-4 px-4 py-2 bg-brand-primary text-white rounded-lg hover:brightness-110"
-              >
-                Add Your First Language
-              </button>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map(u => (
+                    <div key={u.id} className="flex items-center justify-between p-3 bg-bg-alt/50 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-black">
+                          {u.avatar_url ? <img src={u.avatar_url} className="w-full h-full rounded-full object-cover" /> : u.username[0].toUpperCase()}
+                        </div>
+                        <p className="font-black text-sm">{u.username}</p>
+                      </div>
+                      <button
+                        onClick={() => toggleFollow(u.id)}
+                        className={`duo-btn text-xs px-4 py-1.5 ${followingIds.has(u.id) ? 'duo-btn-white border-2 border-border-main' : 'duo-btn-blue'}`}
+                      >
+                        {followingIds.has(u.id) ? 'FOLLOWING' : 'FOLLOW'}
+                      </button>
+                    </div>
+                  ))
+                ) : searchQuery && (
+                  <p className="text-center text-text-alt font-bold py-4">No users found.</p>
+                )}
+              </div>
             </div>
           )}
-        </div>
+        </section>
 
-        {/* Settings */}
-        <div className="bg-bg-card rounded-2xl p-6 mb-8 border-2 border-border-main shadow-sm transition-colors duration-300">
-          <h2 className="text-lg font-black text-gray-900 dark:text-white mb-4">Settings</h2>
+        {/* Learning Languages Section */}
+        <section className="bg-bg-card border-2 border-border-main rounded-[24px] p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-black text-gray-900 dark:text-white">Courses</h2>
+            <button
+              onClick={() => setShowAddLanguageModal(true)}
+              className="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center hover:bg-brand-primary/10 hover:text-brand-primary transition-all"
+            >
+              <Plus size={20} />
+            </button>
+          </div>
 
-          {/* Theme Toggle */}
-          <div className="flex items-center justify-between py-3 border-b border-border-main">
+          <div className="space-y-3">
+            {learningLanguages.map((lang) => {
+              const info = getLanguage(lang.code)
+              const isActive = (currentLearningLanguage || learningLanguage) === lang.code
+              return (
+                <div key={lang.code} className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${isActive ? 'border-brand-primary bg-brand-primary/5' : 'border-border-main'}`}>
+                  <div className="flex items-center gap-4">
+                    <span className="text-3xl">{info?.flag}</span>
+                    <div className="text-left font-black">
+                      <p className="text-gray-900 dark:text-white leading-none">{info?.name}</p>
+                      <p className="text-text-alt text-xs uppercase tracking-widest mt-1">Section {lang.currentSection + 1}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!isActive && (
+                      <button onClick={() => handleSwitchLanguage(lang.code)} className="text-brand-primary font-black text-xs uppercase tracking-widest px-3 py-1 hover:bg-brand-primary/10 rounded-lg transition-all">
+                        SWITCH
+                      </button>
+                    )}
+                    {isActive && <UserCheck className="text-brand-primary" size={20} />}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* Settings / System Actions */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-bg-card border-2 border-border-main rounded-2xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {theme === 'dark' ? <Moon size={20} className="text-indigo-500" /> : <Sun size={20} className="text-amber-500" />}
-              <div>
-                <p className="text-gray-900 dark:text-white font-bold">Theme</p>
-                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Switch between light and dark mode</p>
+              <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
+                {theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />}
               </div>
+              <p className="font-black text-gray-900 dark:text-white">Dark Mode</p>
             </div>
             <button
               onClick={toggleTheme}
-              className={`relative w-14 h-8 rounded-full transition-colors ${theme === 'dark' ? 'bg-indigo-500' : 'bg-gray-300'
-                }`}
+              className={`relative w-12 h-6 rounded-full transition-colors ${theme === 'dark' ? 'bg-indigo-500' : 'bg-gray-300'}`}
             >
-              <div className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${theme === 'dark' ? 'translate-x-7' : 'translate-x-1'
-                }`}>
-                {theme === 'dark' ? (
-                  <Moon size={14} className="text-indigo-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                ) : (
-                  <Sun size={14} className="text-amber-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                )}
-              </div>
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${theme === 'dark' ? 'translate-x-[26px]' : 'translate-x-1'}`} />
             </button>
           </div>
-        </div>
 
-        {/* Achievements */}
-        <div className="bg-bg-card rounded-xl p-6 border-2 border-border-main shadow-sm transition-colors duration-300">
-          <h2 className="text-lg font-black text-gray-900 dark:text-white mb-4">Achievements</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {achievements.map((achievement) => (
-              <div
-                key={achievement.id}
-                className={`rounded-xl p-4 text-center transition-all border-2 ${achievement.unlocked
-                  ? 'bg-brand-primary/10 border-brand-primary/30'
-                  : 'bg-bg-alt border-border-main opacity-50'
-                  }`}
-              >
-                <span className="text-3xl mb-2 block">
-                  {achievement.unlocked ? achievement.icon : '🔒'}
-                </span>
-                <p
-                  className={`font-bold text-sm ${achievement.unlocked ? 'text-gray-900 dark:text-white' : 'text-gray-400'
-                    }`}
-                >
-                  {achievement.title}
-                </p>
-                <p className="text-gray-500 dark:text-gray-400 text-xs mt-1 font-medium">
-                  {achievement.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+          <button
+            onClick={handleSignOut}
+            className="bg-bg-card border-2 border-border-main rounded-2xl p-4 flex items-center gap-3 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all text-red-500"
+          >
+            <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center">
+              <LogOut size={20} />
+            </div>
+            <p className="font-black">Sign Out</p>
+          </button>
+        </section>
 
-        {/* Sign Out Button */}
-        <button
-          onClick={handleSignOut}
-          className="w-full bg-bg-card hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 font-black uppercase tracking-widest py-4 rounded-xl border-2 border-border-main shadow-sm transition-all flex items-center justify-center gap-2 mt-8"
-        >
-          <LogOut size={20} />
-          Sign Out
-        </button>
       </div>
 
-      {/* Language Selection Modal */}
-      {showLanguageModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-bg-card rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden border-2 border-border-main shadow-2xl transition-colors duration-300">
-            <div className="p-4 border-b border-border-main flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Globe size={20} className="text-brand-primary" />
-                <h2 className="text-lg font-black text-gray-900 dark:text-white">Change Language</h2>
+      {/* Edit Profile Modal */}
+      <Modal
+        isOpen={isEditing}
+        onClose={() => setIsEditing(false)}
+        title="Edit Profile"
+        maxWidth="max-w-xl"
+      >
+        <form onSubmit={handleSaveSettings} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">Username</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full p-4 bg-bg-alt border-2 border-border-main rounded-2xl text-text-main font-bold focus:outline-none focus:border-brand-primary transition-all"
+                />
               </div>
-              <button
-                onClick={() => { setShowLanguageModal(false); setSelectedLanguage(null) }}
-                className="p-2 text-text-alt hover:text-gray-600 rounded-lg"
-              >
-                <X size={20} />
-              </button>
+
+              {user?.email && (
+                <div className="space-y-2">
+                  <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-alt" size={20} />
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      className="w-full p-4 pl-12 bg-bg-alt border-2 border-border-main rounded-2xl text-text-main font-bold focus:outline-none focus:border-brand-primary transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">New Password (leave blank to keep current)</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-alt" size={20} />
+                  <input
+                    type="password"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full p-4 pl-12 bg-bg-alt border-2 border-border-main rounded-2xl text-text-main font-bold focus:outline-none focus:border-brand-primary transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">Bio</label>
+                <textarea
+                  value={editBio}
+                  onChange={(e) => setEditBio(e.target.value)}
+                  rows={3}
+                  className="w-full p-4 bg-bg-alt border-2 border-border-main rounded-2xl text-text-main font-bold focus:outline-none focus:border-brand-primary transition-all resize-none"
+                />
+              </div>
             </div>
 
-            <div className="p-4 overflow-y-auto max-h-[50vh]">
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">Select a language to learn:</p>
-              <div className="space-y-2">
-                {availableLanguages.map((lang) => (
+            <div className="space-y-4">
+              <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">Choose Avatar</label>
+              <div className="grid grid-cols-4 gap-2 border-2 border-border-main rounded-2xl p-3 bg-bg-alt max-h-[280px] overflow-y-auto">
+                {AVATAR_OPTIONS.map((url) => (
                   <button
-                    key={lang.code}
-                    onClick={() => setSelectedLanguage(lang.code)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${selectedLanguage === lang.code
-                      ? 'border-brand-primary bg-brand-primary/10'
-                      : lang.code === learningLanguage
-                        ? 'border-brand-primary/50 bg-brand-primary/5'
-                        : 'border-border-main hover:border-brand-primary/30'
-                      }`}
+                    key={url}
+                    type="button"
+                    onClick={() => setEditAvatar(url)}
+                    className={`aspect-square rounded-xl overflow-hidden border-4 transition-all ${editAvatar === url ? 'border-brand-primary' : 'border-transparent hover:border-border-main'}`}
                   >
-                    <span className="text-3xl">{lang.flag}</span>
-                    <div className="flex-1 text-left">
-                      <p className="text-gray-900 dark:text-white font-black">{lang.name}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{lang.nativeName}</p>
-                    </div>
-                    {selectedLanguage === lang.code && (
-                      <div className="w-6 h-6 bg-brand-primary rounded-full flex items-center justify-center">
-                        <Check size={14} className="text-white" />
-                      </div>
-                    )}
-                    {lang.code === learningLanguage && selectedLanguage !== lang.code && (
-                      <span className="text-xs text-brand-primary bg-brand-primary/10 px-2 py-1 rounded">Current</span>
-                    )}
+                    <img src={url} alt="Avatar" className="w-full h-full object-cover" />
                   </button>
                 ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = prompt('Enter image URL:')
+                    if (url) setEditAvatar(url)
+                  }}
+                  className="aspect-square rounded-xl border-4 border-dashed border-border-main flex items-center justify-center text-text-alt hover:text-brand-primary hover:border-brand-primary transition-all"
+                >
+                  <Plus size={24} />
+                </button>
+              </div>
+              <div className="flex items-center gap-4 p-4 bg-bg-alt border-2 border-border-main rounded-2xl">
+                <div className="w-16 h-16 bg-brand-primary rounded-full flex items-center justify-center text-white text-2xl font-black overflow-hidden border-2 border-border-main">
+                  {editAvatar ? <img src={editAvatar} alt="" className="w-full h-full object-cover" /> : editName?.[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-xs font-black text-text-alt uppercase tracking-widest">Preview</p>
+                  <p className="text-text-main font-bold">{editName || 'Username'}</p>
+                </div>
               </div>
             </div>
-
-            <div className="p-4 border-t border-border-main">
-              <button
-                onClick={handleLanguageChange}
-                disabled={!selectedLanguage || selectedLanguage === learningLanguage}
-                className={`w-full py-3 rounded-xl font-black uppercase tracking-widest transition-all ${selectedLanguage
-                  ? 'bg-brand-primary text-white hover:brightness-110'
-                  : 'bg-gray-200 dark:bg-[#2a3f4a] text-gray-400 dark:text-[#58687a] cursor-not-allowed'
-                  }`}
-              >
-                Change Language
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <button
+            type="submit"
+            disabled={savingSettings}
+            className="w-full duo-btn duo-btn-blue flex items-center justify-center gap-2 py-4"
+          >
+            {savingSettings ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Check size={20} />}
+            SAVE CHANGES
+          </button>
+        </form>
+      </Modal>
 
       {/* Add Language Modal */}
-      {showAddLanguageModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-bg-card rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden border-2 border-border-main shadow-2xl transition-colors duration-300">
-            <div className="p-4 border-b border-border-main flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Globe size={20} className="text-brand-primary" />
-                <h2 className="text-lg font-black text-gray-900 dark:text-white">Add Language</h2>
+      <Modal
+        isOpen={showAddLanguageModal}
+        onClose={() => setShowAddLanguageModal(false)}
+        title="Add Language"
+      >
+        <div className="grid grid-cols-1 gap-2">
+          {availableLanguages.filter(lang => !learningLanguages.find(l => l.code === lang.code)).map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => { setSelectedLanguage(lang.code); }}
+              className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${selectedLanguage === lang.code ? 'border-brand-primary bg-brand-primary/10' : 'border-border-main hover:bg-bg-alt'}`}
+            >
+              <span className="text-3xl">{lang.flag}</span>
+              <div className="flex-1 text-left">
+                <p className="text-gray-900 dark:text-white font-black">{lang.name}</p>
+                <p className="text-text-alt text-sm font-bold">{lang.nativeName}</p>
               </div>
-              <button
-                onClick={() => { setShowAddLanguageModal(false); setSelectedLanguage(null) }}
-                className="p-2 text-text-alt hover:text-gray-600 dark:hover:text-white rounded-lg"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-4 overflow-y-auto max-h-[50vh]">
-              <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 font-bold">Select a language to add:</p>
-              <div className="space-y-2">
-                {availableLanguages.filter(lang => !learningLanguages.find(l => l.code === lang.code)).map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => setSelectedLanguage(lang.code)}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${selectedLanguage === lang.code
-                      ? 'border-brand-primary bg-brand-primary/10'
-                      : 'border-border-main hover:border-brand-primary/30'
-                      }`}
-                  >
-                    <span className="text-3xl">{lang.flag}</span>
-                    <div className="flex-1 text-left">
-                      <p className="text-gray-900 dark:text-white font-black">{lang.name}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">{lang.nativeName}</p>
-                    </div>
-                    {selectedLanguage === lang.code && (
-                      <div className="w-6 h-6 bg-brand-primary rounded-full flex items-center justify-center">
-                        <Check size={14} className="text-white" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-border-main">
-              <button
-                onClick={handleAddLanguage}
-                disabled={!selectedLanguage}
-                className={`w-full py-3 rounded-xl font-bold transition-all ${selectedLanguage
-                  ? 'bg-brand-primary text-white hover:brightness-110'
-                  : 'bg-gray-200 dark:bg-[#2a3f4a] text-text-alt dark:text-[#58687a] cursor-not-allowed'
-                  }`}
-              >
-                Add Language
-              </button>
-            </div>
-          </div>
+            </button>
+          ))}
         </div>
-      )}
+        <div className="mt-6 pt-6 border-t-2 border-border-main">
+          <button
+            onClick={handleAddLanguage}
+            disabled={!selectedLanguage}
+            className="w-full duo-btn duo-btn-blue"
+          >
+            ADD COURSE
+          </button>
+        </div>
+      </Modal>
+
+      {/* Find Friends Modal */}
+      <Modal
+        isOpen={showSearch}
+        onClose={() => { setShowSearch(false); setSearchResults([]); setSearchQuery(''); }}
+        title="Find Friends"
+      >
+        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by username..."
+            className="flex-1 p-3 bg-bg-alt border-2 border-border-main rounded-xl text-text-main font-bold focus:outline-none focus:border-brand-primary"
+          />
+          <button type="submit" className="duo-btn duo-btn-blue px-4" disabled={searching}>
+            {searching ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Search size={20} />}
+          </button>
+        </form>
+
+        <div className="space-y-2">
+          {searchResults.length === 0 && searchQuery && !searching && (
+            <p className="text-center text-text-alt py-4">No users found</p>
+          )}
+          {searchResults.map((u) => (
+            <div key={u.id} className="flex items-center justify-between p-3 bg-bg-alt rounded-xl border-2 border-transparent hover:border-border-divider transition-all">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-brand-primary rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold overflow-hidden">
+                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.username?.[0]?.toUpperCase()}
+                </div>
+                <div className="min-w-0 overflow-hidden">
+                  <p className="text-text-main font-bold truncate pr-2" title={u.username}>{u.username}</p>
+                  <p className="text-text-alt text-xs">{u.xp || 0} XP</p>
+                </div>
+              </div>
+              {u.id !== profile?.id && (
+                <button
+                  onClick={() => toggleFollow(u.id)}
+                  className={`duo-btn text-[10px] px-3 py-2 flex-shrink-0 ${followingIds.has(u.id) ? 'duo-btn-outline' : 'duo-btn-blue'}`}
+                >
+                  {followingIds.has(u.id) ? 'FOLLOWING' : 'FOLLOW'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }

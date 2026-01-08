@@ -151,30 +151,41 @@ export const generateDailyQuests = (userId = 'guest', count = 3) => {
 }
 
 // Generate weekly quests (harder, better rewards)
-export const generateWeeklyQuests = (count = 2) => {
+export const generateWeeklyQuests = (userId = 'guest', count = 2) => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const weekNumber = Math.ceil((((now - new Date(year, 0, 1)) / 86400000) + 1) / 7)
+  const seedBase = `${userId}-week-${year}-${weekNumber}`
+
+  let seed = 0
+  for (let i = 0; i < seedBase.length; i++) {
+    seed += seedBase.charCodeAt(i)
+  }
+
   const weeklyTypes = questTypes.filter(q =>
     ['section_complete', 'perfect_week', 'dedicated', 'xp_milestone', 'tournament', 'monthly_goal'].includes(q.type)
   )
 
-  const shuffled = [...weeklyTypes].sort(() => Math.random() - 0.5)
+  const shuffled = [...weeklyTypes].sort(() => seededRandom(seed++) - 0.5)
   const selected = shuffled.slice(0, count)
 
   return selected.map(quest => {
     const target = Math.floor(
-      Math.random() * (quest.targetRange[1] - quest.targetRange[0] + 1) + quest.targetRange[0]
+      seededRandom(seed++) * (quest.targetRange[1] - quest.targetRange[0] + 1) + quest.targetRange[0]
     )
 
     return {
-      id: `weekly-quest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `weekly-${year}-${weekNumber}-${quest.id}`,
       ...quest,
       title: quest.title.replace('{count}', target),
       target,
       progress: 0,
       xpReward: quest.xpReward * 2,
       gemReward: quest.gemReward * 2,
-      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
       createdAt: Date.now(),
-      isWeekly: true
+      isWeekly: true,
+      category: 'challenges'
     }
   })
 }
@@ -195,4 +206,34 @@ export const updateQuestProgressByAction = (quests, action, value = 1) => {
     }
     return quest
   })
+}
+
+// Generate monthly challenge (very hard, huge rewards)
+export const generateMonthlyChallenge = (userId = 'guest') => {
+  const now = new Date()
+  const month = now.getMonth()
+  const year = now.getFullYear()
+  const seedBase = `${userId}-month-${year}-${month}`
+
+  let seed = 0
+  for (let i = 0; i < seedBase.length; i++) {
+    seed += seedBase.charCodeAt(i)
+  }
+
+  // Monthly goal: complete X daily quests
+  return {
+    id: `monthly-${year}-${month}`,
+    type: 'monthly_challenge',
+    title: `${now.toLocaleString('default', { month: 'long' })} Challenge`,
+    description: `Complete 30 daily quests this month to earn the ${now.toLocaleString('default', { month: 'long' })} badge!`,
+    target: 30,
+    progress: 0,
+    xpReward: 1000,
+    gemReward: 100,
+    icon: '🏆',
+    expiresAt: new Date(year, month + 1, 0, 23, 59, 59, 999).getTime(),
+    createdAt: Date.now(),
+    isMonthly: true,
+    category: 'special'
+  }
 }

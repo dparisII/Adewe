@@ -14,6 +14,7 @@ const defaultBranding = {
   copyright: '© 2024 Adewe. Made with ❤️ for Ethiopian languages',
   seo_title: 'Adewe - Learn Ethiopian Languages',
   seo_description: 'Interactive platform to learn Amharic, Tigrinya, Oromo, Somali and more',
+  show_legal_links: true,
   footer_links: [
     {
       label: 'About Us',
