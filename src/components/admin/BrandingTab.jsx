@@ -27,7 +27,7 @@ function Toast({ message, type, onClose }) {
 }
 
 const BrandingTab = () => {
-  const { branding, updateBranding } = useBranding()
+  const { branding, updateBranding, refreshBranding } = useBranding()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState(null)
@@ -74,76 +74,52 @@ const BrandingTab = () => {
 
   const fetchBranding = async () => {
     setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('branding_settings')
-        .select('*')
-        .single()
-
-      if (data && !error) {
-        updateBranding(data)
-      } else {
-        const localData = localStorage.getItem('adewe_branding')
-        if (localData) {
-          try {
-            const parsed = JSON.parse(localData)
-            updateBranding(parsed)
-          } catch (e) {
-            console.log('Error parsing local branding data')
-          }
-        }
-      }
-    } catch (error) {
-      console.log('Branding table error, checking localStorage')
-      const localData = localStorage.getItem('adewe_branding')
-      if (localData) {
-        try {
-          const parsed = JSON.parse(localData)
-          updateBranding(parsed)
-        } catch (e) {
-          console.log('Error parsing local branding data')
-        }
-      }
-    } finally {
-      setLoading(false)
-    }
+    await refreshBranding()
+    setLoading(false)
   }
 
   const handleSaveAll = async () => {
     setSaving(true)
     try {
+      const timestamp = new Date().toISOString()
+      const payload = {
+        ...localBranding,
+        updated_at: timestamp
+      }
+
       const { error } = await supabase
         .from('branding_settings')
         .upsert({
           id: '00000000-0000-0000-0000-000000000001',
-          ...localBranding,
-          updated_at: new Date().toISOString(),
+          ...payload,
         })
 
-      if (error) {
-        localStorage.setItem('adewe_branding', JSON.stringify(localBranding))
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'adewe_branding',
-          newValue: JSON.stringify(localBranding)
-        }))
-        updateBranding(localBranding)
-        applyBrandingToPage(localBranding)
-        showToast('Branding saved locally!', 'success')
-      } else {
-        updateBranding(localBranding)
-        applyBrandingToPage(localBranding)
-        showToast('Branding settings saved!', 'success')
-      }
-    } catch (error) {
-      console.error('Error saving branding:', error)
-      localStorage.setItem('adewe_branding', JSON.stringify(localBranding))
+      if (error) throw error
+
+      updateBranding(payload)
+      applyBrandingToPage(payload)
+      showToast('Branding settings saved!', 'success')
+
+      localStorage.setItem('adewe_branding', JSON.stringify(payload))
       window.dispatchEvent(new StorageEvent('storage', {
         key: 'adewe_branding',
-        newValue: JSON.stringify(localBranding)
+        newValue: JSON.stringify(payload)
       }))
-      updateBranding(localBranding)
-      applyBrandingToPage(localBranding)
-      showToast('Branding saved locally!', 'success')
+
+    } catch (error) {
+      console.error('Error saving branding:', error)
+      const timestamp = new Date().toISOString()
+      const payload = { ...localBranding, updated_at: timestamp }
+
+      localStorage.setItem('adewe_branding', JSON.stringify(payload))
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'adewe_branding',
+        newValue: JSON.stringify(payload)
+      }))
+
+      updateBranding(payload)
+      applyBrandingToPage(payload)
+      showToast(`Saved locally (DB: ${error.message})`, 'success')
     } finally {
       setSaving(false)
     }

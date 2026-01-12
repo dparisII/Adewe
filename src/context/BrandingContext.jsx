@@ -87,34 +87,48 @@ export function BrandingProvider({ children }) {
 
   const fetchBranding = async () => {
     try {
-      // Try database first if supabase is available
-      if (!supabase) {
-        throw new Error('Supabase not configured')
-      }
-      const { data, error } = await supabase
+      if (!supabase) throw new Error('Supabase not configured')
+
+      // Fetch from DB
+      const { data: dbData, error } = await supabase
         .from('branding_settings')
         .select('*')
         .single()
 
-      if (data && !error) {
-        setBranding(prev => ({ ...prev, ...data }))
-        applyBranding(data)
-      } else {
-        // Fallback to localStorage
-        const localData = localStorage.getItem('adewe_branding')
-        if (localData) {
-          const parsed = JSON.parse(localData)
-          setBranding(prev => ({ ...prev, ...parsed }))
-          applyBranding(parsed)
+      // Fetch from LocalStorage
+      const localDataStr = localStorage.getItem('adewe_branding')
+      const localData = localDataStr ? JSON.parse(localDataStr) : null
+
+      let finalBranding = defaultBranding
+
+      if (dbData && !error) {
+        finalBranding = { ...finalBranding, ...dbData }
+
+        // Compare with LocalStorage if exists
+        if (localData && localData.updated_at) {
+          const dbTime = new Date(dbData.updated_at || 0).getTime()
+          const localTime = new Date(localData.updated_at).getTime()
+
+          if (localTime > dbTime) {
+            console.log('Using local branding (newer than DB)')
+            finalBranding = { ...finalBranding, ...localData }
+          }
         }
+      } else if (localData) {
+        console.log('DB fetch failed, using local branding')
+        finalBranding = { ...finalBranding, ...localData }
       }
+
+      setBranding(finalBranding)
+      applyBranding(finalBranding)
+
     } catch (error) {
-      // Fallback to localStorage
-      const localData = localStorage.getItem('adewe_branding')
-      if (localData) {
-        const parsed = JSON.parse(localData)
-        setBranding(prev => ({ ...prev, ...parsed }))
-        applyBranding(parsed)
+      console.error('Fetch branding error:', error)
+      const localDataStr = localStorage.getItem('adewe_branding')
+      if (localDataStr) {
+        const localData = JSON.parse(localDataStr)
+        setBranding(prev => ({ ...prev, ...localData }))
+        applyBranding(localData)
       }
     } finally {
       setLoading(false)
