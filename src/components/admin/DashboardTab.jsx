@@ -79,7 +79,7 @@ const AreaChart = ({ data, dataKey, color, label, gradientColor }) => {
 
   return (
     <div className="h-48 mb-8 bg-bg-alt/30 p-4 rounded-2xl border-2 border-border-main/50 relative group">
-      <div className="absolute top-2 right-4 text-xs font-black text-text-alt uppercase tracking-widest opacity-50">
+      <div className="absolute top-2 right-4 text-[9px] font-black text-text-alt uppercase tracking-widest opacity-40">
         Max: {Math.round(maxValue)}
       </div>
 
@@ -122,9 +122,9 @@ const AreaChart = ({ data, dataKey, color, label, gradientColor }) => {
           <circle
             key={i}
             cx={getX(i)} cy={getY(d[dataKey] || 0)}
-            r={hoveredIndex === i ? "5" : "3"}
+            r={hoveredIndex === i ? "4" : "2"}
             fill={hoveredIndex === i ? color : "white"}
-            stroke={color} strokeWidth="2"
+            stroke={color} strokeWidth="1.5"
             className="transition-all duration-200"
           />
         ))}
@@ -132,22 +132,22 @@ const AreaChart = ({ data, dataKey, color, label, gradientColor }) => {
         {/* Stable Tooltip Implementation */}
         {hoveredIndex !== null && (
           <g transform={`translate(${getX(hoveredIndex)}, ${getY(data[hoveredIndex][dataKey] || 0)})`}>
-            <g transform="translate(0, -15)">
-              <rect x="-35" y="-25" width="70" height="25" rx="6" fill="#1e1e1e" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.3))" />
-              <text y="-8" textAnchor="middle" fill="white" fontSize="10" fontWeight="900" style={{ pointerEvents: 'none' }}>
+            <g transform="translate(0, -12)">
+              <rect x="-30" y="-18" width="60" height="18" rx="4" fill="#1e1e1e" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.3))" />
+              <text y="-7" textAnchor="middle" fill="white" fontSize="8" fontWeight="900" style={{ pointerEvents: 'none' }}>
                 {data[hoveredIndex][dataKey] || 0} {label}
               </text>
               {/* Arrow pointing down */}
-              <path d="M-4,-2 L0,2 L4,-2" fill="none" stroke="#1e1e1e" strokeWidth="4" />
+              <path d="M-3,-1 L0,1 L3,-1" fill="none" stroke="#1e1e1e" strokeWidth="2" />
             </g>
           </g>
         )}
       </svg>
 
       {/* X Axis Labels */}
-      <div className="flex justify-between mt-3 px-1">
+      <div className="flex justify-between mt-2 px-1">
         {data.map((d, i) => (
-          <span key={i} className="text-[9px] font-black text-text-alt uppercase tracking-tighter w-0 overflow-visible text-center whitespace-nowrap">
+          <span key={i} className="text-[7px] font-black text-text-alt uppercase tracking-tighter w-0 overflow-visible text-center whitespace-nowrap opacity-30 group-hover:opacity-100 transition-opacity">
             {d.date.split(',')[0]}
           </span>
         ))}
@@ -221,6 +221,14 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
   const activeThisWeek = users.filter(u => new Date(u.updated_at) >= thisWeek).length
   const newThisWeek = users.filter(u => new Date(u.created_at) >= thisWeek).length
   const newThisMonth = users.filter(u => new Date(u.created_at) >= thisMonth).length
+
+  const activeVisitsToday = (stats.visits || []).filter(v => new Date(v.created_at) >= today).length
+  const activeVisitsWeek = (stats.visits || []).filter(v => new Date(v.created_at) >= thisWeek).length
+  const activeVisitsMonth = (stats.visits || []).filter(v => new Date(v.created_at) >= thisMonth).length
+
+  const uniqueVisitorsToday = new Set((stats.visits || []).filter(v => new Date(v.created_at) >= today).map(v => v.visitor_id)).size
+  const uniqueVisitorsWeek = new Set((stats.visits || []).filter(v => new Date(v.created_at) >= thisWeek).map(v => v.visitor_id)).size
+  const uniqueVisitorsMonth = new Set((stats.visits || []).filter(v => new Date(v.created_at) >= thisMonth).map(v => v.visitor_id)).size
 
   const avgXp = users.length > 0 ? Math.round(stats.totalXp / users.length) : 0
   const totalStreaks = users.reduce((sum, u) => sum + (u.streak || 0), 0)
@@ -377,7 +385,7 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
 
   return (
     <div className="space-y-6">
-      {/* Layer 1: Traffic Stats - Now Clickable */}
+      {/* Layer 1: Traffic Stats - Now Clickable & Dynamic */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <button
           onClick={() => setShowPageViewDetails(true)}
@@ -386,8 +394,8 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
           <div className="w-16 h-16 bg-brand-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform">
             <Activity className="text-white" size={32} />
           </div>
-          <p className="text-5xl font-black text-gray-900 dark:text-white mb-2">{stats.totalViews?.toLocaleString() || 0}</p>
-          <p className="text-brand-primary font-black uppercase tracking-widest text-sm">Total Page Views</p>
+          <p className="text-5xl font-black text-gray-900 dark:text-white mb-2">{(timeRange === 'today' ? activeVisitsToday : timeRange === 'week' ? activeVisitsWeek : activeVisitsMonth).toLocaleString()}</p>
+          <p className="text-brand-primary font-black uppercase tracking-widest text-sm">{timeRange === 'today' ? 'Page Views Today' : timeRange === 'week' ? 'Page Views This Week' : 'Page Views This Month'}</p>
           <p className="text-xs text-text-alt mt-2 font-bold uppercase tracking-widest flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100">
             View Analytics <TrendingUp size={14} />
           </p>
@@ -399,8 +407,8 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
           <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform">
             <Users className="text-white" size={32} />
           </div>
-          <p className="text-5xl font-black text-gray-900 dark:text-white mb-2">{stats.totalVisitors?.toLocaleString() || 0}</p>
-          <p className="text-blue-500 font-black uppercase tracking-widest text-sm">Unique Visitors</p>
+          <p className="text-5xl font-black text-gray-900 dark:text-white mb-2">{(timeRange === 'today' ? uniqueVisitorsToday : timeRange === 'week' ? uniqueVisitorsWeek : uniqueVisitorsMonth).toLocaleString()}</p>
+          <p className="text-blue-500 font-black uppercase tracking-widest text-sm">{timeRange === 'today' ? 'Unique Visitors Today' : timeRange === 'week' ? 'Visitors This Week' : 'Visitors This Month'}</p>
           <p className="text-xs text-text-alt mt-2 font-bold uppercase tracking-widest flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100">
             View Statistics <TrendingUp size={14} />
           </p>
@@ -513,19 +521,28 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
             <h1 className="text-2xl font-bold text-text-main mb-2">Welcome to Admin Dashboard</h1>
             <p className="text-text-alt">Here's what's happening with your platform today.</p>
           </div>
-          <div className="hidden md:flex items-center gap-2">
-            {['today', 'week', 'month'].map(range => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${timeRange === range
-                  ? 'bg-brand-primary text-white'
-                  : 'text-gray-500 dark:text-text-alt hover:bg-gray-100 dark:hover:bg-[#37464f]'
-                  }`}
-              >
-                {range.charAt(0).toUpperCase() + range.slice(1)}
-              </button>
-            ))}
+          <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-2 bg-white/50 dark:bg-black/20 p-1 rounded-xl border border-brand-primary/20">
+              {['today', 'week', 'month'].map(range => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${timeRange === range
+                    ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20'
+                    : 'text-text-alt hover:bg-white dark:hover:bg-white/10'
+                    }`}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={onRefresh}
+              className="p-2 bg-white/80 dark:bg-white/10 hover:bg-brand-primary hover:text-white text-brand-primary border border-brand-primary/20 rounded-xl shadow-sm transition-all group"
+              title="Refresh Stats"
+            >
+              <RefreshCw size={18} className={loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
+            </button>
           </div>
         </div>
       </div>

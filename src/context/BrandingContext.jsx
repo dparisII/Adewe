@@ -11,7 +11,7 @@ const defaultBranding = {
   accent_color: '#ff9600',
   logo_url: '',
   favicon_url: '',
-  copyright: '© 2024 Adewe. Made with ❤️ for Ethiopian languages',
+  copyright: '© 2026 Adewe. Made with ❤️ for Ethiopian languages',
   seo_title: 'Adewe - Learn Ethiopian Languages',
   seo_description: 'Interactive platform to learn Amharic, Tigrinya, Oromo, Somali and more',
   show_legal_links: true,

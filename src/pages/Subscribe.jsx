@@ -305,6 +305,18 @@ function Subscribe() {
         return
       }
 
+      // Check if promo is restricted to specific tiers/items
+      if (data.applicable_to_type === 'tier') {
+        if (!data.applicable_to_ids || !data.applicable_to_ids.includes(selectedPlan.id)) {
+          setPromoError('This promo code is not applicable to the selected plan')
+          return
+        }
+      } else if (data.applicable_to_type === 'item') {
+        // Shop items aren't handled on this page, but we should inform the user
+        setPromoError('This promo code is only for shop items')
+        return
+      }
+
       setAppliedPromo({
         id: data.id,
         code: data.code,

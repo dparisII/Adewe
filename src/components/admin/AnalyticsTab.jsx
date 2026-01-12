@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import {
   Users, TrendingUp, Globe, Clock, Activity, Calendar, Target,
   Award, Flame, AlertCircle, CheckCircle, XCircle, RefreshCw,
-  BarChart2, ArrowRight
+  BarChart2, ArrowRight, Database
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import useStore from '../../store/useStore'
+import DataManagementSection from './DataManagementSection'
 
 function AnalyticsTab({ users, onTabChange }) {
   const [activeSection, setActiveSection] = useState('overview')
@@ -135,6 +136,7 @@ function AnalyticsTab({ users, onTabChange }) {
     { id: 'overview', label: 'Overview', icon: BarChart2 },
     { id: 'errors', label: 'Error Tracking', icon: AlertCircle },
     { id: 'users', label: 'User Activity', icon: Users },
+    { id: 'data', label: 'Data Management', icon: Database },
   ]
 
   return (
@@ -652,7 +654,7 @@ function AnalyticsTab({ users, onTabChange }) {
                           {count} attempts
                         </div>
                       </div>
-                      <span className="text-[10px] text-text-alt font-medium rotate-45 mt-1">{i}h</span>
+                      <span className="text-[8px] text-text-alt font-black rotate-45 mt-2 opacity-50 group-hover:opacity-100 transition-opacity whitespace-nowrap">{i}h</span>
                     </div>
                   )
                 })}
@@ -805,6 +807,10 @@ function AnalyticsTab({ users, onTabChange }) {
             </div>
           </div>
         </div>
+      )}
+
+      {activeSection === 'data' && (
+        <DataManagementSection />
       )}
     </div>
   )

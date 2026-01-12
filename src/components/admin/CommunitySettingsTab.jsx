@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Save, RefreshCw, Megaphone, CheckCircle, XCircle, X, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import Modal from '../Modal'
 
 function Toast({ message, type, onClose }) {
     useEffect(() => {
@@ -29,6 +30,7 @@ function CommunitySettingsTab() {
     const [saving, setSaving] = useState(false)
     const [toast, setToast] = useState(null)
     const [showAddModal, setShowAddModal] = useState(false)
+    const [confirmModal, setConfirmModal] = useState(null)
     const [settings, setSettings] = useState({
         first_lesson: { enabled: true, xp: 10, message: "just completed their first lesson! 🎓" },
         milestone_50xp: { enabled: true, xp: 50, message: "reached the 50 XP milestone! ⚡" },
@@ -113,11 +115,19 @@ function CommunitySettingsTab() {
     }
 
     const removeTrigger = (id) => {
-        if (!confirm('Are you sure you want to remove this trigger?')) return
-        const updated = { ...settings }
-        delete updated[id]
-        setSettings(updated)
-        saveSettings(updated) // Proactively save
+        setConfirmModal({
+            title: 'Delete Trigger',
+            message: `Are you sure you want to remove the "${id.replace(/_/g, ' ')}" trigger? This action cannot be undone.`,
+            isDestructive: true,
+            onConfirm: () => {
+                setConfirmModal(null)
+                const updated = { ...settings }
+                delete updated[id]
+                setSettings(updated)
+                saveSettings(updated)
+                showToast('Trigger removed successfully', 'success')
+            }
+        })
     }
 
     if (loading) {
@@ -210,66 +220,94 @@ function CommunitySettingsTab() {
 
             {/* Add Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-md">
-                    <div className="bg-bg-card rounded-[32px] w-full max-w-md border-2 border-border-main shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="p-6 border-b-2 border-border-main flex items-center justify-between">
-                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Add Milestone Trigger</h2>
-                            <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-bg-alt rounded-lg transition-colors"><X size={20} /></button>
+                <Modal
+                    isOpen={showAddModal}
+                    onClose={() => setShowAddModal(false)}
+                    title="Add Milestone Trigger"
+                >
+                    <form onSubmit={handleAddTrigger} className="p-8 space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Select Trigger Type</label>
+                            <select
+                                value={newTrigger.id}
+                                onChange={e => setNewTrigger({ ...newTrigger, id: e.target.value })}
+                                className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary transition-all"
+                            >
+                                <option value="">Select or type...</option>
+                                <option value="streak_7">7 Day Streak</option>
+                                <option value="streak_30">30 Day Streak</option>
+                                <option value="milestone_100xp">100 XP Milestone</option>
+                                <option value="milestone_500xp">500 XP Milestone</option>
+                                <option value="new_friend">New Friend</option>
+                                <option value="item_purchase">Shop Purchase</option>
+                                <option value="perfect_lesson">Perfect Lesson</option>
+                            </select>
+                            <input
+                                type="text"
+                                value={newTrigger.id}
+                                onChange={e => setNewTrigger({ ...newTrigger, id: e.target.value })}
+                                placeholder="Or type custom ID..."
+                                className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary transition-all mt-2"
+                            />
                         </div>
 
-                        <form onSubmit={handleAddTrigger} className="p-8 space-y-6">
-                            <div className="space-y-2">
-                                <select
-                                    value={newTrigger.id}
-                                    onChange={e => setNewTrigger({ ...newTrigger, id: e.target.value })}
-                                    className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary transition-all"
-                                >
-                                    <option value="">Select or type...</option>
-                                    <option value="streak_7">7 Day Streak</option>
-                                    <option value="streak_30">30 Day Streak</option>
-                                    <option value="milestone_100xp">100 XP Milestone</option>
-                                    <option value="milestone_500xp">500 XP Milestone</option>
-                                    <option value="new_friend">New Friend</option>
-                                    <option value="item_purchase">Shop Purchase</option>
-                                    <option value="perfect_lesson">Perfect Lesson</option>
-                                </select>
-                                <input
-                                    type="text"
-                                    value={newTrigger.id}
-                                    onChange={e => setNewTrigger({ ...newTrigger, id: e.target.value })}
-                                    placeholder="Or type custom ID..."
-                                    className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary transition-all mt-2"
-                                />
-                            </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Post Message</label>
+                            <textarea
+                                required
+                                value={newTrigger.message}
+                                onChange={e => setNewTrigger({ ...newTrigger, message: e.target.value })}
+                                placeholder="just achieved a daily streak! 🔥"
+                                className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary h-24 resize-none transition-all"
+                            />
+                        </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Post Message</label>
-                                <textarea
-                                    required
-                                    value={newTrigger.message}
-                                    onChange={e => setNewTrigger({ ...newTrigger, message: e.target.value })}
-                                    placeholder="just achieved a daily streak! 🔥"
-                                    className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary h-24 resize-none transition-all"
-                                />
-                            </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Optional XP Threshold</label>
+                            <input
+                                type="number"
+                                value={newTrigger.xp}
+                                onChange={e => setNewTrigger({ ...newTrigger, xp: parseInt(e.target.value) })}
+                                className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary transition-all"
+                            />
+                        </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Optional XP Threshold</label>
-                                <input
-                                    type="number"
-                                    value={newTrigger.xp}
-                                    onChange={e => setNewTrigger({ ...newTrigger, xp: parseInt(e.target.value) })}
-                                    className="w-full bg-bg-alt border-2 border-border-main rounded-2xl p-4 font-bold outline-none focus:border-brand-primary transition-all"
-                                />
-                            </div>
+                        <div className="pt-4 flex gap-3">
+                            <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 duo-btn duo-btn-white">CANCEL</button>
+                            <button type="submit" className="flex-1 duo-btn duo-btn-blue">ADD TRIGGER</button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
 
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 duo-btn duo-btn-white">CANCEL</button>
-                                <button type="submit" className="flex-1 duo-btn duo-btn-blue">ADD TRIGGER</button>
-                            </div>
-                        </form>
+            {/* Confirm Modal */}
+            {confirmModal && (
+                <Modal
+                    isOpen={!!confirmModal}
+                    onClose={() => setConfirmModal(null)}
+                    title={confirmModal.title}
+                >
+                    <div className="p-8">
+                        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 ${confirmModal.isDestructive ? 'bg-red-100 text-red-500' : 'bg-brand-primary/10 text-brand-primary'}`}>
+                            <Trash2 size={40} />
+                        </div>
+                        <p className="text-text-alt font-bold text-center mb-8">{confirmModal.message}</p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setConfirmModal(null)}
+                                className="flex-1 duo-btn duo-btn-white font-black"
+                            >
+                                CANCEL
+                            </button>
+                            <button
+                                onClick={confirmModal.onConfirm}
+                                className={`flex-1 duo-btn font-black text-white ${confirmModal.isDestructive ? 'bg-red-500 border-b-4 border-red-700 active:border-b-0' : 'duo-btn-blue'}`}
+                            >
+                                {confirmModal.isDestructive ? 'DELETE' : 'CONFIRM'}
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </Modal>
             )}
         </div>
     )

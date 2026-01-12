@@ -4,16 +4,22 @@ import { Megaphone, Save, Plus, Trash2, Layout, Smartphone, X, Edit, CheckCircle
 function AdsTab() {
     const [adsEnabled, setAdsEnabled] = useState(true)
 
+    const [globalSettings, setGlobalSettings] = useState({
+        frequency_cap: 3,
+        refresh_rate: 30,
+        rewarded_bonus: 50
+    })
+
     const [adProviders, setAdProviders] = useState([
-        { id: 1, name: 'Google AdMob', type: 'Banner', status: 'Active', placement: 'Lesson Footer', frequency: 0, link: 'https://admob.google.com' },
-        { id: 2, name: 'Unity Ads', type: 'Interstitial', status: 'Active', placement: 'Lesson Complete', frequency: 3, link: 'https://unity.com/solutions/unity-ads' },
+        { id: 1, name: 'Google AdMob', type: 'Banner', status: 'Active', placement: 'Lesson Footer', frequency: 0, link: 'https://admob.google.com', zone_id: 'ca-app-pub-3940256099942544/6300978111' },
+        { id: 2, name: 'Unity Ads', type: 'Interstitial', status: 'Active', placement: 'Lesson Complete', frequency: 3, link: 'https://unity.com/solutions/unity-ads', zone_id: 'Lesson_Complete_Zone' },
     ])
 
     // Modal & Edit State
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingProvider, setEditingProvider] = useState(null)
     const [formData, setFormData] = useState({
-        name: '', type: 'Banner', placement: 'Home Screen', frequency: 0, status: 'Active', link: ''
+        name: '', type: 'Banner', placement: 'Home Screen', frequency: 0, status: 'Active', link: '', zone_id: ''
     })
 
     // Toast State
@@ -29,7 +35,7 @@ function AdsTab() {
 
     const openAddModal = () => {
         setEditingProvider(null)
-        setFormData({ name: '', type: 'Banner', placement: 'Home Screen', frequency: 0, status: 'Active', link: '' })
+        setFormData({ name: '', type: 'Banner', placement: 'Home Screen', frequency: 0, status: 'Active', link: '', zone_id: '' })
         setIsModalOpen(true)
     }
 
@@ -123,6 +129,16 @@ function AdsTab() {
                                     placeholder="https://example.com"
                                 />
                             </div>
+                            <div>
+                                <label className="block text-xs font-black uppercase text-gray-500 mb-1">Zone ID / Ad Unit ID</label>
+                                <input
+                                    type="text"
+                                    value={formData.zone_id}
+                                    onChange={e => setFormData({ ...formData, zone_id: e.target.value })}
+                                    className="w-full bg-gray-100 dark:bg-[#131f24] border-2 border-transparent focus:border-brand-primary rounded-xl px-4 py-3 font-bold text-gray-900 dark:text-white outline-none transition-all"
+                                    placeholder="e.g. zone-123 or ca-app-pub-..."
+                                />
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-black uppercase text-gray-500 mb-1">Type</label>
@@ -214,6 +230,52 @@ function AdsTab() {
                             className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-colors ${adsEnabled ? 'bg-brand-primary' : 'bg-gray-300'}`}
                         >
                             <div className={`bg-white w-6 h-6 rounded-full shadow-sm transition-transform ${adsEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <div>
+                            <p className="font-bold text-sm text-gray-900 dark:text-white">Frequency Cap</p>
+                            <p className="text-[10px] text-gray-500 uppercase font-black mb-2">Max ads per session</p>
+                            <input
+                                type="range" min="1" max="10"
+                                value={globalSettings.frequency_cap}
+                                onChange={(e) => setGlobalSettings({ ...globalSettings, frequency_cap: parseInt(e.target.value) })}
+                                className="w-full accent-brand-primary"
+                            />
+                            <div className="flex justify-between text-[10px] font-black mt-1">
+                                <span>1</span>
+                                <span className="text-brand-primary">{globalSettings.frequency_cap} ADS</span>
+                                <span>10</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="font-bold text-sm text-gray-900 dark:text-white">Auto-Refresh</p>
+                            <p className="text-[10px] text-gray-500 uppercase font-black mb-2">Banner rotation (sec)</p>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    value={globalSettings.refresh_rate}
+                                    onChange={(e) => setGlobalSettings({ ...globalSettings, refresh_rate: parseInt(e.target.value) })}
+                                    className="w-full bg-gray-100 dark:bg-[#131f24] p-2 rounded-lg font-bold text-sm"
+                                />
+                                <span className="text-xs font-bold">SEC</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p className="font-bold text-sm text-gray-900 dark:text-white">Rewarded Bonus</p>
+                            <p className="text-[10px] text-gray-500 uppercase font-black mb-2">Gems per video</p>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    value={globalSettings.rewarded_bonus}
+                                    onChange={(e) => setGlobalSettings({ ...globalSettings, rewarded_bonus: parseInt(e.target.value) })}
+                                    className="w-full bg-gray-100 dark:bg-[#131f24] p-2 rounded-lg font-bold text-sm"
+                                />
+                                <span className="text-xs font-bold">GEMS</span>
+                            </div>
                         </div>
                     </div>
 

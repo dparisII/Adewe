@@ -52,19 +52,24 @@ function Profile() {
   const [followingCount, setFollowingCount] = useState(0)
   const [isEditing, setIsEditing] = useState(false)
   const [showAddLanguageModal, setShowAddLanguageModal] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState([])
-  const [showSearch, setShowSearch] = useState(false)
   const [followingIds, setFollowingIds] = useState(new Set())
   const [searching, setSearching] = useState(false)
 
   // Edit form state
   const [editName, setEditName] = useState(profile?.username || '')
+  const [editFullName, setEditFullName] = useState(profile?.full_name || '')
   const [editBio, setEditBio] = useState(storeBio || '')
   const [editAvatar, setEditAvatar] = useState(profile?.avatar_url || '')
   const [editEmail, setEditEmail] = useState(user?.email || '')
+  const [editPhone, setEditPhone] = useState(profile?.phone || '')
   const [editPassword, setEditPassword] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
   const [savingSettings, setSavingSettings] = useState(false)
+  const [showFollowersModal, setShowFollowersModal] = useState(false)
+  const [showFollowingModal, setShowFollowingModal] = useState(false)
+  const [followersList, setFollowersList] = useState([])
+  const [followingList, setFollowingList] = useState([])
+  const [loadingFollows, setLoadingFollows] = useState(false)
 
   useEffect(() => {
     if (profile?.id) {
@@ -89,6 +94,76 @@ function Profile() {
       setFollowingCount(following || 0)
     } catch (err) {
       console.error('Error fetching follow stats:', err)
+    }
+  }
+
+  const fetchFollowersList = async () => {
+    setLoadingFollows(true)
+    try {
+      // Step 1: Get follower IDs
+      const { data: follows, error: followsError } = await supabase
+        .from('user_follows')
+        .select('follower_id')
+        .eq('followed_id', profile.id)
+
+      if (followsError) throw followsError
+
+      const followerIds = follows?.map(f => f.follower_id) || []
+
+      if (followerIds.length === 0) {
+        setFollowersList([])
+        return
+      }
+
+      // Step 2: Get profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', followerIds)
+
+      if (profilesError) throw profilesError
+
+      console.log('Followers fetched:', profiles)
+      setFollowersList(profiles || [])
+    } catch (err) {
+      console.error('Error fetching followers:', err)
+    } finally {
+      setLoadingFollows(false)
+    }
+  }
+
+  const fetchFollowingList = async () => {
+    setLoadingFollows(true)
+    try {
+      // Step 1: Get followed IDs
+      const { data: follows, error: followsError } = await supabase
+        .from('user_follows')
+        .select('followed_id')
+        .eq('follower_id', profile.id)
+
+      if (followsError) throw followsError
+
+      const followedIds = follows?.map(f => f.followed_id) || []
+
+      if (followedIds.length === 0) {
+        setFollowingList([])
+        return
+      }
+
+      // Step 2: Get profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', followedIds)
+
+      if (profilesError) throw profilesError
+
+      console.log('Following fetched:', profiles)
+      setFollowingList(profiles || [])
+    } catch (err) {
+      console.error('Error fetching following:', err)
+    } finally {
+      setLoadingFollows(false)
     }
   }
 
@@ -153,11 +228,30 @@ function Profile() {
 
   const handleSaveSettings = async (e) => {
     e.preventDefault()
+
+    // Require current password for any sensitive changes
+    if (!currentPassword) {
+      alert('Please enter your current password to save changes')
+      return
+    }
+
     setSavingSettings(true)
     try {
+      // Authenticate with current password first to verify user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword
+      })
+
+      if (signInError) {
+        throw new Error('Incorrect current password. Please try again.')
+      }
+
       // Update profile metadata
       const { error: profileError } = await supabase.from('profiles').update({
         username: editName,
+        full_name: editFullName,
+        phone: editPhone,
         avatar_url: editAvatar,
         bio: editBio
       }).eq('id', profile.id)
@@ -183,6 +277,9 @@ function Profile() {
 
       setIsEditing(false)
       setEditPassword('')
+      setCurrentPassword('')
+      // Refresh context profile
+      if (updateProfile) updateProfile()
     } catch (err) {
       console.error('Error saving settings:', err)
       alert(err.message || 'Failed to save settings')
@@ -299,13 +396,6 @@ function Profile() {
                 </h1>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setShowSearch(true)}
-                    className="duo-btn duo-btn-blue text-xs px-4 py-2 flex items-center gap-2"
-                  >
-                    <UserPlus size={16} />
-                    FIND FRIENDS
-                  </button>
-                  <button
                     onClick={() => setIsEditing(true)}
                     className="duo-btn duo-btn-white text-xs px-4 py-2 border-2 border-border-main"
                   >
@@ -329,14 +419,20 @@ function Profile() {
               )}
 
               <div className="flex items-center justify-center sm:justify-start gap-6">
-                <div className="text-center sm:text-left">
+                <button
+                  onClick={() => { fetchFollowersList(); setShowFollowersModal(true); }}
+                  className="text-center sm:text-left hover:bg-bg-alt p-2 rounded-xl transition-all cursor-pointer"
+                >
                   <p className="font-black text-gray-900 dark:text-white text-lg leading-none">{followerCount}</p>
                   <p className="text-text-alt text-xs font-black uppercase tracking-widest">Followers</p>
-                </div>
-                <div className="text-center sm:text-left">
+                </button>
+                <button
+                  onClick={() => { fetchFollowingList(); setShowFollowingModal(true); }}
+                  className="text-center sm:text-left hover:bg-bg-alt p-2 rounded-xl transition-all cursor-pointer"
+                >
                   <p className="font-black text-gray-900 dark:text-white text-lg leading-none">{followingCount}</p>
                   <p className="text-text-alt text-xs font-black uppercase tracking-widest">Following</p>
-                </div>
+                </button>
               </div>
             </div>
           </div>
@@ -357,93 +453,6 @@ function Profile() {
           ))}
         </div>
 
-        {/* Add Friends Section - Mockup 3 Style */}
-        <section className="bg-bg-card border-2 border-border-main rounded-[24px] p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-black text-gray-900 dark:text-white">Add friends</h2>
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="text-brand-primary font-black text-sm uppercase tracking-widest hover:underline"
-            >
-              {showSearch ? 'Close' : 'Find friends'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button
-              onClick={() => setShowSearch(true)}
-              className="group flex items-center gap-4 p-4 bg-brand-primary/5 border-2 border-brand-primary/20 rounded-2xl hover:bg-brand-primary/10 transition-all"
-            >
-              <div className="w-12 h-12 bg-brand-primary rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                <Search size={24} />
-              </div>
-              <div className="text-left">
-                <p className="font-black text-gray-900 dark:text-white">Find friends</p>
-                <p className="text-xs text-text-alt font-bold">Search by name</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                const url = window.location.origin
-                navigator.clipboard.writeText(`Check out Adewe! Learning is fun here: ${url}`)
-                alert('Invite link copied to clipboard!')
-              }}
-              className="group flex items-center gap-4 p-4 bg-[#8000ff]/5 border-2 border-[#8000ff]/20 rounded-2xl hover:bg-[#8000ff]/10 transition-all"
-            >
-              <div className="w-12 h-12 bg-[#8000ff] rounded-xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
-                <UserPlus size={24} />
-              </div>
-              <div className="text-left">
-                <p className="font-black text-gray-900 dark:text-white">Invite friends</p>
-                <p className="text-xs text-text-alt font-bold">Share your link</p>
-              </div>
-            </button>
-          </div>
-
-          {/* Search Results / Interface */}
-          {showSearch && (
-            <div className="mt-8 space-y-6 pt-6 border-t border-border-main">
-              <form onSubmit={handleSearch} className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-alt" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search for users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-bg-alt border-2 border-border-main rounded-xl pl-12 pr-4 py-3 font-bold focus:border-brand-primary outline-none transition-all"
-                />
-              </form>
-
-              <div className="space-y-3">
-                {searching ? (
-                  <div className="flex justify-center p-8">
-                    <div className="w-8 h-8 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                ) : searchResults.length > 0 ? (
-                  searchResults.map(u => (
-                    <div key={u.id} className="flex items-center justify-between p-3 bg-bg-alt/50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-black">
-                          {u.avatar_url ? <img src={u.avatar_url} className="w-full h-full rounded-full object-cover" /> : u.username[0].toUpperCase()}
-                        </div>
-                        <p className="font-black text-sm">{u.username}</p>
-                      </div>
-                      <button
-                        onClick={() => toggleFollow(u.id)}
-                        className={`duo-btn text-xs px-4 py-1.5 ${followingIds.has(u.id) ? 'duo-btn-white border-2 border-border-main' : 'duo-btn-blue'}`}
-                      >
-                        {followingIds.has(u.id) ? 'FOLLOWING' : 'FOLLOW'}
-                      </button>
-                    </div>
-                  ))
-                ) : searchQuery && (
-                  <p className="text-center text-text-alt font-bold py-4">No users found.</p>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
 
         {/* Learning Languages Section */}
         <section className="bg-bg-card border-2 border-border-main rounded-[24px] p-6 shadow-sm">
@@ -534,6 +543,28 @@ function Profile() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">Full Name</label>
+                <input
+                  type="text"
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  className="w-full p-4 bg-bg-alt border-2 border-border-main rounded-2xl text-text-main font-bold focus:outline-none focus:border-brand-primary transition-all"
+                  placeholder="Your full name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">Phone Number</label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full p-4 bg-bg-alt border-2 border-border-main rounded-2xl text-text-main font-bold focus:outline-none focus:border-brand-primary transition-all"
+                  placeholder="+251 ..."
+                />
+              </div>
+
               {user?.email && (
                 <div className="space-y-2">
                   <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">Email Address</label>
@@ -548,6 +579,21 @@ function Profile() {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <label className="text-orange-500 font-black uppercase tracking-widest text-[10px]">Current Password (Required to save)</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500/50" size={20} />
+                  <input
+                    required
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full p-4 pl-12 bg-orange-50/50 dark:bg-orange-500/5 border-2 border-orange-200 dark:border-orange-500/30 rounded-2xl text-text-main font-bold focus:outline-none focus:border-orange-500 transition-all placeholder:text-orange-900/20"
+                    placeholder="Enter current password"
+                  />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <label className="text-text-alt font-black uppercase tracking-widest text-[10px]">New Password (leave blank to keep current)</label>
@@ -653,50 +699,80 @@ function Profile() {
         </div>
       </Modal>
 
-      {/* Find Friends Modal */}
-      <Modal
-        isOpen={showSearch}
-        onClose={() => { setShowSearch(false); setSearchResults([]); setSearchQuery(''); }}
-        title="Find Friends"
-      >
-        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by username..."
-            className="flex-1 p-3 bg-bg-alt border-2 border-border-main rounded-xl text-text-main font-bold focus:outline-none focus:border-brand-primary"
-          />
-          <button type="submit" className="duo-btn duo-btn-blue px-4" disabled={searching}>
-            {searching ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Search size={20} />}
-          </button>
-        </form>
 
+      {/* Followers Modal */}
+      <Modal
+        isOpen={showFollowersModal}
+        onClose={() => setShowFollowersModal(false)}
+        title="Followers"
+      >
         <div className="space-y-2">
-          {searchResults.length === 0 && searchQuery && !searching && (
-            <p className="text-center text-text-alt py-4">No users found</p>
-          )}
-          {searchResults.map((u) => (
-            <div key={u.id} className="flex items-center justify-between p-3 bg-bg-alt rounded-xl border-2 border-transparent hover:border-border-divider transition-all">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 bg-brand-primary rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold overflow-hidden">
-                  {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.username?.[0]?.toUpperCase()}
+          {loadingFollows ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : followersList.length === 0 ? (
+            <p className="text-center text-text-alt py-8">No followers yet</p>
+          ) : (
+            followersList.map((u) => (
+              <div key={u.id} className="flex items-center justify-between p-3 bg-bg-alt rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-brand-primary rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                    {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.username?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-text-main font-bold">{u.username}</p>
+                    <p className="text-text-alt text-xs">{u.xp || 0} XP</p>
+                  </div>
                 </div>
-                <div className="min-w-0 overflow-hidden">
-                  <p className="text-text-main font-bold truncate pr-2" title={u.username}>{u.username}</p>
-                  <p className="text-text-alt text-xs">{u.xp || 0} XP</p>
-                </div>
+                {u.id !== profile?.id && (
+                  <button
+                    onClick={() => toggleFollow(u.id)}
+                    className={`duo-btn text-[10px] px-3 py-2 ${followingIds.has(u.id) ? 'duo-btn-outline' : 'duo-btn-blue'}`}
+                  >
+                    {followingIds.has(u.id) ? 'FOLLOWING' : 'FOLLOW BACK'}
+                  </button>
+                )}
               </div>
-              {u.id !== profile?.id && (
+            ))
+          )}
+        </div>
+      </Modal>
+
+      {/* Following Modal */}
+      <Modal
+        isOpen={showFollowingModal}
+        onClose={() => setShowFollowingModal(false)}
+        title="Following"
+      >
+        <div className="space-y-2">
+          {loadingFollows ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-brand-secondary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : followingList.length === 0 ? (
+            <p className="text-center text-text-alt py-8">Not following anyone yet</p>
+          ) : (
+            followingList.map((u) => (
+              <div key={u.id} className="flex items-center justify-between p-3 bg-bg-alt rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-brand-primary rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                    {u.avatar_url ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" /> : u.username?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-text-main font-bold">{u.username}</p>
+                    <p className="text-text-alt text-xs">{u.xp || 0} XP</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => toggleFollow(u.id)}
-                  className={`duo-btn text-[10px] px-3 py-2 flex-shrink-0 ${followingIds.has(u.id) ? 'duo-btn-outline' : 'duo-btn-blue'}`}
+                  className="duo-btn duo-btn-outline text-[10px] px-3 py-2"
                 >
-                  {followingIds.has(u.id) ? 'FOLLOWING' : 'FOLLOW'}
+                  UNFOLLOW
                 </button>
-              )}
-            </div>
-          ))}
+              </div>
+            ))
+          )}
         </div>
       </Modal>
     </div>

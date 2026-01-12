@@ -4,7 +4,7 @@ import {
   Users, BookOpen, BarChart3,
   ArrowLeft, Shield, Crown, AlertTriangle, Palette,
   FileText, CreditCard, Mic, Home, Menu, X, ChevronLeft, ChevronRight, Megaphone,
-  LayoutDashboard, Globe, ShoppingBag
+  LayoutDashboard, Globe, ShoppingBag, Trophy, MessageSquare, Settings, HelpCircle
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useBranding } from '../context/BrandingContext'
@@ -22,20 +22,25 @@ import AnalyticsTab from '../components/admin/AnalyticsTab'
 import HasabAITab from '../components/admin/HasabAITab'
 import AdsTab from '../components/admin/AdsTab'
 import CommunitySettingsTab from '../components/admin/CommunitySettingsTab'
-import ShopManagementTab from '../components/admin/ShopManagementTab' // Added ShopManagementTab
+import ShopManagementTab from '../components/admin/ShopManagementTab'
+import TestimonialsTab from '../components/admin/TestimonialsTab'
+import EventsTab from '../components/admin/EventsTab'
+import SupportTab from '../components/admin/SupportTab'
 
 // Tab configuration
 const tabs = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-brand-primary' }, // Changed icon to LayoutDashboard
-  { id: 'community', label: 'Community', icon: Globe, color: 'text-brand-primary' }, // Changed id to 'community' and icon to Globe
-  { id: 'shop', label: 'Shop', icon: ShoppingBag, color: 'text-green-500' }, // Added Shop tab
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-brand-primary' },
+  { id: 'community', label: 'Community', icon: Globe, color: 'text-brand-primary' },
+  { id: 'events', label: 'Events', icon: Trophy, color: 'text-brand-accent' },
+  { id: 'testimonials', label: 'Testimonials', icon: MessageSquare, color: 'text-[#ce82ff]' },
+  { id: 'shop', label: 'Shop', icon: ShoppingBag, color: 'text-green-500' },
   { id: 'users', label: 'Users', icon: Users, color: 'text-[#ffc800]' },
   { id: 'content', label: 'Content', icon: BookOpen, color: 'text-[#ff9600]' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'text-[#ce82ff]' },
   { id: 'payments', label: 'Payments', icon: CreditCard, color: 'text-[#1cb0f6]' },
-  { id: 'branding', label: 'Branding', icon: Palette, color: 'text-[#ff4b4b]' },
+  { id: 'settings', label: 'Settings', icon: Settings, color: 'text-text-alt' },
+  { id: 'support', label: 'Support', icon: HelpCircle, color: 'text-brand-secondary' },
   { id: 'legal', label: 'Legal', icon: FileText, color: 'text-text-main' },
-  // { id: 'community_settings', label: 'Community', icon: Megaphone, color: 'text-brand-primary' }, // Removed old community_settings tab
   { id: 'ads', label: 'Ads', icon: Megaphone, color: 'text-green-500' },
   { id: 'hasabai', label: 'Hasab AI', icon: Mic, color: 'text-[#1cb0f6]' },
 ]
@@ -132,8 +137,7 @@ function Admin() {
   }
 
   const deleteUser = async (userId) => {
-    if (!confirm('Are you sure you want to delete this user?')) return
-
+    // Confirmation handled by UI modal
     try {
       const { error } = await supabase
         .from('profiles')
@@ -359,13 +363,19 @@ function Admin() {
 
             {activeTab === 'payments' && <PaymentsTab />}
 
-            {activeTab === 'branding' && <BrandingTab />}
+            {activeTab === 'settings' && <BrandingTab />}
+
+            {activeTab === 'testimonials' && <TestimonialsTab />}
+
+            {activeTab === 'events' && <EventsTab />}
 
             {activeTab === 'legal' && <LegalTab />}
 
             {activeTab === 'ads' && <AdsTab />}
 
             {activeTab === 'hasabai' && <HasabAITab />}
+
+            {activeTab === 'support' && <SupportTab />}
           </div>
         </div>
       </main>

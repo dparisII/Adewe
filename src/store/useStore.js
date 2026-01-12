@@ -29,7 +29,8 @@ const useStore = create(
           learningLanguage: profileData.learning_language,
           learningLanguages: profileData.language_progress || [],
           bio: profileData.bio || '',
-          league_id: profileData.league_id || 1
+          league_id: profileData.league_id || 1,
+          lastHeartUpdate: profileData.last_heart_update || null
         }
 
         // Check for unlimited hearts from subscription
@@ -208,6 +209,9 @@ const useStore = create(
             ? null
             : new Date(lastUpdate.getTime() + (heartsToAdd * msPerHeart)).toISOString();
 
+          // Use a slight delay to ensure the set is complete before syncing
+          setTimeout(() => get().syncUserStats(), 100);
+
           return {
             hearts: newHeartsValue,
             lastHeartUpdate: newLastUpdate
@@ -373,6 +377,7 @@ const useStore = create(
               gems,
               xp,
               streak,
+              last_heart_update: lastHeartUpdate,
               updated_at: new Date().toISOString()
             })
             .eq('id', user.id)

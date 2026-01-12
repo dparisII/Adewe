@@ -94,7 +94,6 @@ CREATE TABLE IF NOT EXISTS user_follows (
 
 ALTER TABLE user_follows ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Anyone can see follows" ON user_follows FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Anyone can see follows" ON user_follows;
 CREATE POLICY "Anyone can see follows" ON user_follows FOR SELECT USING (true);
 
@@ -169,10 +168,20 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'profiles' AND COLUMN_NAME = 'language_progress') THEN
     ALTER TABLE profiles ADD COLUMN language_progress JSONB DEFAULT '[]'::jsonb;
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'profiles' AND COLUMN_NAME = 'phone_number') THEN
-    ALTER TABLE profiles ADD COLUMN phone_number TEXT;
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'profiles' AND COLUMN_NAME = 'phone') THEN
+    ALTER TABLE profiles ADD COLUMN phone TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'profiles' AND COLUMN_NAME = 'full_name') THEN
+    ALTER TABLE profiles ADD COLUMN full_name TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'profiles' AND COLUMN_NAME = 'last_heart_update') THEN
+    ALTER TABLE profiles ADD COLUMN last_heart_update TIMESTAMP WITH TIME ZONE;
   END IF;
 END $$;
+
+-- Ensure profiles are publicly readable for joins (following/community)
+DROP POLICY IF EXISTS "Profiles are public" ON profiles;
+CREATE POLICY "Profiles are public" ON profiles FOR SELECT USING (true);
 
 -- Leagues Table
 CREATE TABLE IF NOT EXISTS leagues (
@@ -258,3 +267,31 @@ ON CONFLICT (slug) DO UPDATE SET
   price = EXCLUDED.price,
   icon = EXCLUDED.icon,
   category = EXCLUDED.category;
+
+-- Support Tickets Table
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  subject TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT DEFAULT 'open', -- 'open', 'pending', 'resolved'
+  priority TEXT DEFAULT 'medium', -- 'low', 'medium', 'high'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own tickets" ON support_tickets;
+CREATE POLICY "Users can view their own tickets" ON support_tickets FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create tickets" ON support_tickets;
+CREATE POLICY "Users can create tickets" ON support_tickets FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Admins can manage all tickets" ON support_tickets;
+CREATE POLICY "Admins can manage all tickets" ON support_tickets FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid() AND profiles.is_admin = true
+  )
+);

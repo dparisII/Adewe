@@ -7,6 +7,7 @@ import {
   FileText, Mail, Download, MoreVertical, ExternalLink, Ban, Timer
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import { useBranding } from '../../context/BrandingContext'
 
 // Toast notification component
 function Toast({ message, type, onClose }) {
@@ -36,6 +37,8 @@ function PaymentsTab() {
   const [tiers, setTiers] = useState([])
   const [transactions, setTransactions] = useState([])
   const [promoCodes, setPromoCodes] = useState([])
+  const [shopItems, setShopItems] = useState([])
+  const [familyGroups, setFamilyGroups] = useState([])
   const [userSubscriptions, setUserSubscriptions] = useState([])
   const [paymentRequests, setPaymentRequests] = useState([])
   const [expandedSections, setExpandedSections] = useState({
@@ -191,7 +194,41 @@ function PaymentsTab() {
       }
       setPromoCodes(promoData || [])
 
-      // Fetch local payment settings
+      // Fetch shop items for promo code targeting
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('shop_items')
+        .select('*')
+        .order('name')
+
+      if (itemsError) {
+        console.error('Error fetching shop items:', itemsError)
+      }
+      setShopItems(itemsData || [])
+
+      // Fetch family groups (mocked if table doesn't exist)
+      try {
+        const { data: familyData, error: familyError } = await supabase
+          .from('family_groups')
+          .select('*, profiles:owner_id(username, email), members:family_members(*, profile:user_id(username, email))')
+
+        if (!familyError) {
+          setFamilyGroups(familyData || [])
+        } else {
+          console.warn('Family groups table not found, using legacy subscription lookup')
+          // Fallback: Find users with family-tier subscriptions
+          const familySubs = (userSubs || []).filter(s => s.tier?.name.toLowerCase().includes('family'))
+          setFamilyGroups(familySubs.map(s => ({
+            id: s.id,
+            owner_id: s.user_id,
+            profiles: s.profiles,
+            tier: s.tier,
+            max_members: 6,
+            members: [] // Needs separate lookup
+          })))
+        }
+      } catch (e) {
+        console.error('Error fetching family groups:', e)
+      }
       const { data: localSettings, error: settingsError } = await supabase
         .from('local_payment_settings')
         .select('*')
@@ -404,19 +441,31 @@ function PaymentsTab() {
 
   const savePromoCode = async (data) => {
     try {
+      // Transform discount_type/discount_value to discount_percent/discount_amount for database
+      const dbData = {
+        code: data.code,
+        is_active: data.is_active,
+        max_uses: data.max_uses || null,
+        valid_until: data.valid_until || null,
+        discount_percent: data.discount_type === 'percentage' ? data.discount_value : null,
+        discount_amount: data.discount_type === 'fixed' ? data.discount_value : null,
+        applicable_to_type: data.applicable_to_type || 'all',
+        applicable_to_ids: data.applicable_to_ids || []
+      }
+
       const { error } = editingItem
-        ? await supabase.from('promo_codes').update(data).eq('id', editingItem.id)
-        : await supabase.from('promo_codes').insert([data])
+        ? await supabase.from('promo_codes').update(dbData).eq('id', editingItem.id)
+        : await supabase.from('promo_codes').insert([dbData])
 
       if (error) throw error
 
-      showToast(editingItem ? 'Promo code updated!' : 'Promo code created!')
+      showToast(editingItem ? 'Promo code updated!' : 'Promo code created!', 'success')
       fetchData()
       setShowPromoModal(false)
       setEditingItem(null)
     } catch (error) {
       console.error('Error saving promo code:', error)
-      showToast('Error saving promo code', 'error')
+      showToast(`Error saving promo code: ${error.message}`, 'error')
     }
   }
 
@@ -530,6 +579,7 @@ function PaymentsTab() {
           { id: 'tiers', label: 'Subscription Tiers', icon: CreditCard },
           { id: 'transactions', label: 'Transactions', icon: DollarSign },
           { id: 'promos', label: 'Promo Codes', icon: Tag },
+          { id: 'family', label: 'Family Groups', icon: Users, badge: familyGroups.length },
         ].map(section => (
           <button
             key={section.id}
@@ -1511,6 +1561,99 @@ function PaymentsTab() {
         )
       }
 
+      {/* Family Groups Section */}
+      {activeSection === 'family' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-bg-card p-6 rounded-2xl border-2 border-border-main">
+            <div>
+              <h2 className="text-2xl font-black text-text-main">Family Groups</h2>
+              <p className="text-text-alt text-sm font-bold uppercase tracking-widest">Manage Group Subscriptions & Members</p>
+            </div>
+            <button
+              onClick={fetchData}
+              className="p-3 bg-bg-alt text-text-alt hover:text-brand-primary rounded-xl border-2 border-border-main transition-all"
+            >
+              <RefreshCw size={20} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            {familyGroups.length > 0 ? familyGroups.map(group => (
+              <div key={group.id} className="bg-bg-card rounded-3xl border-2 border-border-main overflow-hidden shadow-sm">
+                <div className="p-6 border-b-2 border-border-main bg-bg-alt/30 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center">
+                      <Users size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-text-main">Group: {group.profiles?.username}'s Family</h3>
+                      <p className="text-xs text-text-alt font-bold uppercase tracking-widest">{group.tier?.name || 'Super Family'}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-text-main">{group.members?.length || 0} / {group.max_members || 6}</p>
+                    <p className="text-[10px] text-text-alt font-bold uppercase tracking-widest">Members</p>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black text-text-alt uppercase tracking-[0.2em] mb-4">Included Members</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {/* Owner */}
+                      <div className="flex items-center gap-3 p-3 bg-bg-alt/50 rounded-2xl border-2 border-brand-primary/20 relative">
+                        <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center font-black text-xs">
+                          {group.profiles?.username?.[0]?.toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-text-main">{group.profiles?.username} (Owner)</p>
+                          <p className="text-[10px] text-text-alt font-bold">{group.profiles?.email}</p>
+                        </div>
+                        <Crown size={12} className="absolute top-2 right-2 text-brand-primary" />
+                      </div>
+
+                      {/* Other Members */}
+                      {group.members?.map(member => (
+                        <div key={member.id} className="flex items-center gap-3 p-3 bg-bg-alt/50 rounded-2xl border-2 border-border-main group/member">
+                          <div className="w-8 h-8 rounded-full bg-bg-card text-text-alt border-2 border-border-main flex items-center justify-center font-black text-xs">
+                            {member.profile?.username?.[0]?.toUpperCase() || 'U'}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-black text-text-main">{member.profile?.username || 'Invited'}</p>
+                            <p className="text-[10px] text-text-alt font-bold">{member.profile?.email || member.email}</p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Add Member Placeholder */}
+                      {(group.members?.length || 0) < (group.max_members || 5) && (
+                        <button className="flex items-center gap-3 p-3 border-2 border-dashed border-border-main rounded-2xl text-text-alt hover:border-brand-primary hover:text-brand-primary transition-all group/add">
+                          <div className="w-8 h-8 rounded-full border-2 border-dashed border-border-main flex items-center justify-center group-hover/add:border-brand-primary">
+                            <Plus size={16} />
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-widest">Add Member</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-bg-alt/10 border-t-2 border-border-main flex justify-end gap-3">
+                  <button className="duo-btn duo-btn-white text-[10px] px-4 py-2">MANAGE INVITATIONS</button>
+                  <button className="duo-btn duo-btn-blue text-[10px] px-4 py-2">GROUP SETTINGS</button>
+                </div>
+              </div>
+            )) : (
+              <div className="p-12 text-center bg-bg-card rounded-3xl border-2 border-dashed border-border-main">
+                <Users size={48} className="mx-auto mb-4 opacity-20" />
+                <p className="text-text-alt font-black uppercase tracking-widest">No active family groups found</p>
+                <p className="text-xs text-text-alt mt-2 font-bold">Groups are automatically created for users with Family Plan subscriptions.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Tier Modal */}
       {
         showTierModal && (
@@ -1527,6 +1670,8 @@ function PaymentsTab() {
         showPromoModal && (
           <PromoModal
             promo={editingItem}
+            tiers={tiers}
+            shopItems={shopItems}
             onSave={savePromoCode}
             onClose={() => { setShowPromoModal(false); setEditingItem(null) }}
           />
@@ -1917,15 +2062,39 @@ function ProviderConfigModal({ provider, onSave, onClose }) {
     </div>
   )
 }
-function PromoModal({ promo, onSave, onClose }) {
+function PromoModal({ promo, tiers = [], shopItems = [], onSave, onClose }) {
+  // Convert database fields to form fields when editing
+  const getInitialDiscountType = () => {
+    if (promo?.discount_percent > 0) return 'percentage'
+    if (promo?.discount_amount > 0) return 'fixed'
+    return promo?.discount_type || 'percentage'
+  }
+
+  const getInitialDiscountValue = () => {
+    if (promo?.discount_percent > 0) return promo.discount_percent
+    if (promo?.discount_amount > 0) return promo.discount_amount
+    return promo?.discount_value || 10
+  }
+
   const [form, setForm] = useState({
     code: promo?.code || '',
-    discount_type: promo?.discount_type || 'percentage',
-    discount_value: promo?.discount_value || 10,
+    discount_type: getInitialDiscountType(),
+    discount_value: getInitialDiscountValue(),
     max_uses: promo?.max_uses || '',
     valid_until: promo?.valid_until ? promo.valid_until.split('T')[0] : '',
     is_active: promo?.is_active ?? true,
+    applicable_to_type: promo?.applicable_to_type || 'all',
+    applicable_to_ids: promo?.applicable_to_ids || [],
   })
+
+  const toggleTargetId = (id) => {
+    setForm(prev => ({
+      ...prev,
+      applicable_to_ids: prev.applicable_to_ids.includes(id)
+        ? prev.applicable_to_ids.filter(i => i !== id)
+        : [...prev.applicable_to_ids, id]
+    }))
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -2002,6 +2171,74 @@ function PromoModal({ promo, onSave, onClose }) {
                 className="w-full p-4 bg-bg-alt border-2 border-border-main rounded-2xl text-text-main font-bold focus:border-brand-primary outline-none transition-all"
               />
             </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-text-main font-black text-sm uppercase tracking-widest mb-2">Applies To</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'all', label: 'All Items' },
+                  { id: 'tier', label: 'Subscription' },
+                  { id: 'item', label: 'Shop Item' }
+                ].map(type => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, applicable_to_type: type.id, applicable_to_ids: [] })}
+                    className={`p-3 rounded-xl border-2 font-bold text-xs transition-all ${form.applicable_to_type === type.id
+                      ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                      : 'border-border-main text-text-alt hover:border-brand-primary/50'
+                      }`}
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {form.applicable_to_type === 'tier' && (
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-text-alt uppercase tracking-widest">Select Tiers</label>
+                <div className="flex flex-wrap gap-2">
+                  {tiers.map(tier => (
+                    <button
+                      key={tier.id}
+                      type="button"
+                      onClick={() => toggleTargetId(tier.id)}
+                      className={`px-3 py-1.5 rounded-lg border-2 text-[10px] font-black uppercase tracking-widest transition-all ${form.applicable_to_ids.includes(tier.id)
+                        ? 'bg-brand-primary border-brand-primary text-white'
+                        : 'border-border-main text-text-alt hover:bg-bg-alt'
+                        }`}
+                    >
+                      {tier.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {form.applicable_to_type === 'item' && (
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-text-alt uppercase tracking-widest">Select Shop Items</label>
+                <div className="max-h-32 overflow-y-auto pr-2 space-y-1">
+                  {shopItems.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => toggleTargetId(item.id)}
+                      className={`w-full flex items-center justify-between p-2 rounded-lg border-2 text-xs font-bold transition-all ${form.applicable_to_ids.includes(item.id)
+                        ? 'border-brand-primary bg-brand-primary/5 text-brand-primary'
+                        : 'border-border-main text-text-alt hover:bg-bg-alt'
+                        }`}
+                    >
+                      <span>{item.icon} {item.name}</span>
+                      {form.applicable_to_ids.includes(item.id) && <Check size={14} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between p-4 bg-bg-alt/30 rounded-2xl border-2 border-border-main">
@@ -2095,6 +2332,7 @@ function ConfirmModal({ title, message, onConfirm, onClose, isDestructive = fals
 function TransactionDetailModal({ transaction, onClose, showToast, tiers = [] }) {
   const [showPreview, setShowPreview] = useState(false)
   const [showEmailSent, setShowEmailSent] = useState(false)
+  const { branding } = useBranding()
 
   if (!transaction) return null
 
@@ -2123,6 +2361,10 @@ function TransactionDetailModal({ transaction, onClose, showToast, tiers = [] })
 
     const dateStr = transaction.created_at ? new Date(transaction.created_at).toLocaleDateString() : new Date().toLocaleDateString()
 
+    // Get brand color from branding or use default
+    const brandColor = branding?.primary_color || '#58cc02'
+    const siteName = branding?.site_name || 'Adewe Learning'
+
     return `
       <html>
         <head>
@@ -2130,7 +2372,7 @@ function TransactionDetailModal({ transaction, onClose, showToast, tiers = [] })
           <style>
             body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e1e1e; max-width: 800px; margin: 0 auto; }
             .header { display: flex; justify-content: space-between; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #eee; }
-            .logo { font-size: 24px; font-weight: 900; color: #58cc02; text-transform: uppercase; letter-spacing: 1px; }
+            .logo { font-size: 24px; font-weight: 900; color: ${brandColor}; text-transform: uppercase; letter-spacing: 1px; }
             .meta { text-align: right; color: #666; font-size: 14px; }
             .bill-to { margin-bottom: 40px; }
             .label { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #999; margin-bottom: 5px; }
@@ -2138,13 +2380,13 @@ function TransactionDetailModal({ transaction, onClose, showToast, tiers = [] })
             .table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
             .table th { text-align: left; padding: 15px; background: #f9f9f9; font-size: 12px; text-transform: uppercase; color: #666; }
             .table td { padding: 15px; border-bottom: 1px solid #eee; }
-            .total { text-align: right; font-size: 24px; font-weight: 900; color: #58cc02; }
+            .total { text-align: right; font-size: 24px; font-weight: 900; color: ${brandColor}; }
             .footer { margin-top: 60px; text-align: center; color: #999; font-size: 12px; }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="logo">Adewe Learning</div>
+            <div class="logo">${siteName}</div>
             <div class="meta">
               <p>Invoice #: ${transaction.external_transaction_id || transaction.id.slice(0, 8)}</p>
               <p>Date: ${dateStr}</p>

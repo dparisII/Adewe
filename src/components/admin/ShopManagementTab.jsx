@@ -4,12 +4,15 @@ import { supabase } from '../../lib/supabase'
 import { shopItems as localShopItems } from '../../data/shopData'
 
 const ShopItemCard = ({ item, onToggle, onEdit, onDelete }) => (
-    <div className={`bg-bg-card border-2 border-border-main rounded-2xl p-5 shadow-sm transition-all hover:border-brand-primary/30 ${!item.is_available && 'opacity-60 bg-gray-50'}`}>
+    <div
+        onClick={() => onEdit(item)}
+        className={`bg-bg-card border-2 border-border-main rounded-2xl p-5 shadow-sm transition-all hover:border-brand-primary/50 hover:shadow-md cursor-pointer group/card ${!item.is_available && 'opacity-60 bg-gray-50'}`}
+    >
         <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 bg-bg-alt rounded-xl flex items-center justify-center text-2xl shadow-inner border-2 border-border-main">
+            <div className="w-12 h-12 bg-bg-alt rounded-xl flex items-center justify-center text-2xl shadow-inner border-2 border-border-main group-hover/card:scale-110 transition-transform">
                 {item.icon}
             </div>
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center" onClick={e => e.stopPropagation()}>
                 <button
                     onClick={() => onToggle(item)}
                     className={`relative w-12 h-6 rounded-full transition-colors ${item.is_available ? 'bg-green-500' : 'bg-gray-300'}`}
@@ -21,7 +24,7 @@ const ShopItemCard = ({ item, onToggle, onEdit, onDelete }) => (
             </div>
         </div>
         <div className="space-y-1">
-            <h3 className="font-black text-gray-900 dark:text-white flex items-center gap-2">
+            <h3 className="font-black text-gray-900 dark:text-white flex items-center gap-2 group-hover/card:text-brand-primary transition-colors">
                 {item.name}
                 {!item.is_available && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black">UNAVAILABLE</span>}
             </h3>
@@ -31,7 +34,6 @@ const ShopItemCard = ({ item, onToggle, onEdit, onDelete }) => (
                     <Gem size={14} fill="currentColor" />
                     <span>{item.price}</span>
                 </div>
-                {/* Category tag is redundant if grouped, but good for quick verify */}
                 <span className="text-[10px] font-black uppercase tracking-widest text-text-alt bg-bg-alt px-2 py-1 rounded-lg">
                     {item.category}
                 </span>

@@ -6,7 +6,8 @@ A Duolingo-style language learning app for Ethiopian and East African languages.
 
 - **English** 🇬🇧
 - **Amharic** (አማርኛ) 🇪🇹
-- **Tigrinya** (ትግርኛ) 🇪🇷
+<!-- - **Tigrinya** (ትግርኛ) 🇪🇷 -->
+- **Tigrinya** (ትግርኛ) 🇪🇹
 - **Afaan Oromo** (Afaan Oromoo) 🇪🇹
 - **Somali** (Soomaali) 🇸🇴
 

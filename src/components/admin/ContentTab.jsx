@@ -65,6 +65,7 @@ function ContentTab() {
   const [showLessonModal, setShowLessonModal] = useState(false)
   const [selectedUnitForDetails, setSelectedUnitForDetails] = useState(null)
   const [showUnitDetailsModal, setShowUnitDetailsModal] = useState(false)
+  const [flagPreview, setFlagPreview] = useState(null) // Added for flag uploads
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [confirmText, setConfirmText] = useState('')
 
@@ -401,6 +402,17 @@ function ContentTab() {
     setConfirmText('')
   }
 
+  const handleFlagUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setFlagPreview(e.target.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handleDeleteLanguage = async (langId) => {
     const lang = languages.find(l => l.id === langId)
     setDeleteConfirm({
@@ -424,7 +436,7 @@ function ContentTab() {
       code: formData.get('code'),
       name: formData.get('name'),
       native_name: formData.get('native_name'),
-      flag: formData.get('flag') || '🏳️',
+      flag: flagPreview || formData.get('flag') || '🏳️',
       script: formData.get('script') || 'latin',
       is_active: true
     }
@@ -443,6 +455,7 @@ function ContentTab() {
       }
       setShowModal(null)
       setEditingItem(null)
+      setFlagPreview(null)
     } catch (err) {
       console.error('Error saving language:', err)
       showToast('Error saving language', 'error')
@@ -773,16 +786,57 @@ function ContentTab() {
 
       {/* Language Modal */}
       {showModal === 'language' && (
-        <Modal isOpen={true} onClose={() => { setShowModal(null); setEditingItem(null); }} title={editingItem ? 'Edit Language' : 'Add New Language'}>
+        <Modal isOpen={true} onClose={() => { setShowModal(null); setEditingItem(null); setFlagPreview(null); }} title={editingItem ? 'Edit Language' : 'Add New Language'}>
           <form onSubmit={handleSaveLanguage} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Code</label>
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Code (e.g. am, en)</label>
                 <input required name="code" defaultValue={editingItem?.code} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Name</label>
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Name (English)</label>
                 <input required name="name" defaultValue={editingItem?.name} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Native Name</label>
+                <input required name="native_name" defaultValue={editingItem?.native_name} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Script (e.g. geez, latin)</label>
+                <input name="script" defaultValue={editingItem?.script || 'geez'} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+              </div>
+            </div>
+
+            <div className="bg-bg-alt p-4 rounded-2xl border-2 border-border-main space-y-3">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Flag Identity</label>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-bg-card rounded-2xl border-2 border-border-main flex items-center justify-center text-4xl overflow-hidden shadow-inner group relative">
+                  {flagPreview || editingItem?.flag ? (
+                    (flagPreview || editingItem?.flag).length > 4 ? (
+                      <img src={flagPreview || editingItem?.flag} className="w-full h-full object-cover" alt="Flag" />
+                    ) : (
+                      <span>{flagPreview || editingItem?.flag}</span>
+                    )
+                  ) : (
+                    <Globe size={32} className="text-text-alt opacity-20" />
+                  )}
+                  <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                    <Plus className="text-white" size={24} />
+                    <input type="file" accept="image/*" onChange={handleFlagUpload} className="hidden" />
+                  </label>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <input
+                    name="flag"
+                    placeholder="Paste emoji or emoji string"
+                    defaultValue={(!flagPreview && editingItem?.flag?.length <= 4) ? editingItem?.flag : ''}
+                    className="w-full bg-bg-card border-2 border-border-main rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-brand-primary"
+                  />
+                  <p className="text-[9px] font-bold text-text-alt uppercase tracking-tight">Emoji or Upload Image for custom flags</p>
+                </div>
               </div>
             </div>
             <div className="duo-btn-group flex gap-3 pt-4">
@@ -860,8 +914,12 @@ function ContentTab() {
               <textarea required name="question" defaultValue={editingItem?.question} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary resize-none" rows={2} />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Answer</label>
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Answer (Selection for MC)</label>
               <input required name="answer" defaultValue={editingItem?.correct_answer} className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black uppercase text-text-alt tracking-widest">Options (Comma separated for Multiple Choice)</label>
+              <textarea name="options" defaultValue={editingItem?.options?.join(', ')} placeholder="Option 1, Option 2, Option 3" className="w-full bg-bg-alt border-2 border-border-main rounded-xl p-3 font-bold outline-none focus:border-brand-primary resize-none" rows={2} />
             </div>
             <div className="duo-btn-group flex gap-3 pt-4">
               <button type="button" onClick={() => setShowModal(null)} className="flex-1 duo-btn duo-btn-white">CANCEL</button>
@@ -916,8 +974,11 @@ function ContentTab() {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[110] backdrop-blur-md" style={{ margin: 0, padding: '1rem' }}>
-          <div className="bg-bg-card dark:bg-[#131f24] rounded-[32px] w-full max-w-md border-2 border-red-500/30 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999] p-4 backdrop-blur-md animate-in fade-in duration-200">
+          <div
+            className="bg-bg-card dark:bg-[#131f24] rounded-[32px] w-full max-w-md border-2 border-red-500/30 shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[90vh]"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="p-6 border-b-2 border-border-main flex items-center justify-between">
               <h3 className="text-xl font-black text-red-500 uppercase tracking-wide flex items-center gap-2">
                 <Trash2 size={24} /> DELETE ITEM
@@ -972,8 +1033,8 @@ function ContentTab() {
                   }}
                   disabled={confirmText.toLowerCase() !== deleteConfirm.name.toLowerCase()}
                   className={`flex-1 py-3 rounded-2xl font-black uppercase tracking-widest transition-all ${confirmText.toLowerCase() === deleteConfirm.name.toLowerCase()
-                      ? 'bg-red-500 text-white hover:bg-red-600 shadow-[0_4px_0_0_#b91c1c]'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-red-500 text-white hover:bg-red-600 shadow-[0_4px_0_0_#b91c1c]'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                 >
                   DELETE

@@ -20,6 +20,7 @@ import Admin from './pages/Admin'
 import Subscribe from './pages/Subscribe'
 import LegalPage from './pages/LegalPage'
 import Community from './pages/Community'
+import Exercises from './pages/Exercises'
 import AnalyticsTracker from './components/AnalyticsTracker'
 import NotFound from './pages/NotFound'
 
@@ -206,6 +207,16 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Admin />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/more/exercises"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Exercises />
+            </AppLayout>
           </ProtectedRoute>
         }
       />

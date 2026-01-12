@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS branding_settings (
   header_links JSONB DEFAULT '[]',
   footer_links JSONB DEFAULT '[]',
   social_links JSONB DEFAULT '{}',
-  copyright TEXT DEFAULT '© 2024 Adewe. Made with ❤️ for Ethiopian languages',
+  copyright TEXT DEFAULT '© 2026 Adewe. Made with ❤️ for Ethiopian languages',
   seo_title TEXT DEFAULT 'Adewe - Learn Ethiopian Languages',
   seo_description TEXT DEFAULT 'Interactive platform to learn Amharic, Tigrinya, Oromo, Somali and more',
   seo_keywords TEXT DEFAULT 'ethiopian languages, learn amharic, tigrinya, oromo, somali',

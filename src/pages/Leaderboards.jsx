@@ -3,21 +3,50 @@ import { getLeagueById } from '../data/leaguesData'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import useStore from '../store/useStore'
-import { Trophy, Medal, Crown, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Trophy, Medal, Crown, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react'
 
 function Leaderboards() {
   const { profile } = useAuth()
   const { xp } = useStore()
   const [leaderboardData, setLeaderboardData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [timeRemaining, setTimeRemaining] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
   const leagueId = profile?.league_id || 1
   const currentLeague = getLeagueById(leagueId)
 
-  // Calculate zones based on the current league's rules and active user count
+  // League zone rules - Top 5 promote, 6-15 stay, 16+ demote
   const zones = {
-    promotion: currentLeague.promoteTop,
-    demotion: currentLeague.demoteBottom
+    promotion: 5,  // Top 5 advance
+    safe: 15,      // 6-15 stay
+    demotion: 16   // 16+ demote
   }
+
+  // Calculate time remaining until end of week (Sunday midnight)
+  useEffect(() => {
+    const calculateTimeRemaining = () => {
+      const now = new Date()
+      const endOfWeek = new Date()
+
+      // Calculate days until Sunday
+      const daysUntilSunday = (7 - now.getDay()) % 7 || 7
+      endOfWeek.setDate(now.getDate() + daysUntilSunday)
+      endOfWeek.setHours(23, 59, 59, 999)
+
+      const diff = endOfWeek.getTime() - now.getTime()
+
+      if (diff > 0) {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+        setTimeRemaining({ days, hours, minutes, seconds })
+      }
+    }
+
+    calculateTimeRemaining()
+    const interval = setInterval(calculateTimeRemaining, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -57,15 +86,10 @@ function Leaderboards() {
 
   const currentUser = leaderboardData.find(u => u.isCurrentUser)
 
-  const getTrendIcon = (trend) => {
-    switch (trend) {
-      case 'up':
-        return <TrendingUp size={16} className="text-brand-primary" />
-      case 'down':
-        return <TrendingDown size={16} className="text-red-500" />
-      default:
-        return <Minus size={16} className="text-gray-500" />
-    }
+  const getZoneStatus = (rank) => {
+    if (rank <= zones.promotion) return 'promotion'
+    if (rank <= zones.safe) return 'safe'
+    return 'demotion'
   }
 
   const getRankBadge = (rank) => {
@@ -81,9 +105,44 @@ function Leaderboards() {
     }
   }
 
+  // Split leaderboard into zones
+  const promotionZone = leaderboardData.filter(u => u.rank <= zones.promotion)
+  const safeZone = leaderboardData.filter(u => u.rank > zones.promotion && u.rank <= zones.safe)
+  const demotionZone = leaderboardData.filter(u => u.rank > zones.safe)
+
   return (
     <div className="min-h-screen md:p-8 pb-24 md:pb-8">
       <div className="max-w-2xl mx-auto">
+        {/* Current User Status - Moved to TOP */}
+        {currentUser && (
+          <div className="bg-gradient-to-r from-brand-primary/20 to-blue-500/20 rounded-2xl p-4 mb-6 border-2 border-brand-primary/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-brand-primary text-white rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-brand-primary/30">
+                  #{currentUser.rank}
+                </div>
+                <div>
+                  <p className="text-text-main font-black text-lg">YOU</p>
+                  <p className="text-text-alt font-bold">{currentUser.xp.toLocaleString()} XP</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className={`font-black text-sm uppercase tracking-widest px-3 py-1 rounded-full ${getZoneStatus(currentUser.rank) === 'promotion' ? 'bg-emerald-500/20 text-emerald-500' :
+                    getZoneStatus(currentUser.rank) === 'demotion' ? 'bg-red-500/20 text-red-500' :
+                      'bg-gray-500/20 text-gray-500'
+                  }`}>
+                  {getZoneStatus(currentUser.rank) === 'promotion' ? 'Promotion' :
+                    getZoneStatus(currentUser.rank) === 'demotion' ? 'Demotion' : 'Safe'}
+                </p>
+                <p className="text-text-alt text-xs font-bold mt-1">
+                  {getZoneStatus(currentUser.rank) === 'promotion' ? 'Top 5 advance!' :
+                    getZoneStatus(currentUser.rank) === 'demotion' ? 'Need more XP!' : 'Keep pushing!'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-brand-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-3 border-2 border-brand-primary/30">
@@ -95,25 +154,45 @@ function Leaderboards() {
           <p className="text-text-alt font-bold text-sm">Top {zones.promotion} advance to the next league</p>
         </div>
 
-        {/* Time Remaining */}
-        <div className="bg-bg-card rounded-xl p-3 mb-4 border border-border-main transition-colors duration-300">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Time remaining</span>
-            <span className="text-text-main dark:text-white font-bold">6 days 23 hours</span>
+        {/* Time Remaining - Realistic countdown */}
+        <div className="bg-bg-card rounded-xl p-4 mb-4 border border-border-main transition-colors duration-300">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock size={18} className="text-brand-primary" />
+              <span className="text-text-alt font-bold">Time remaining</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="bg-bg-alt px-2 py-1 rounded-lg">
+                <span className="text-text-main font-black">{timeRemaining.days}</span>
+                <span className="text-text-alt text-xs ml-1">d</span>
+              </div>
+              <div className="bg-bg-alt px-2 py-1 rounded-lg">
+                <span className="text-text-main font-black">{String(timeRemaining.hours).padStart(2, '0')}</span>
+                <span className="text-text-alt text-xs ml-1">h</span>
+              </div>
+              <div className="bg-bg-alt px-2 py-1 rounded-lg">
+                <span className="text-text-main font-black">{String(timeRemaining.minutes).padStart(2, '0')}</span>
+                <span className="text-text-alt text-xs ml-1">m</span>
+              </div>
+              <div className="bg-bg-alt px-2 py-1 rounded-lg">
+                <span className="text-brand-primary font-black">{String(timeRemaining.seconds).padStart(2, '0')}</span>
+                <span className="text-text-alt text-xs ml-1">s</span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Leaderboard */}
         <div className="bg-bg-card rounded-xl border-2 border-border-main overflow-hidden transition-colors duration-300">
-          {/* Promotion Zone */}
+          {/* Promotion Zone - Top 5 */}
           <div className="px-4 py-2 bg-brand-primary/10 border-b border-brand-primary/30">
-            <span className="text-brand-primary text-sm font-black tracking-widest">PROMOTION ZONE</span>
+            <span className="text-brand-primary text-sm font-black tracking-widest">PROMOTION ZONE (Top 5)</span>
           </div>
 
-          {leaderboardData.slice(0, zones.promotion).map((u) => (
+          {promotionZone.map((u) => (
             <div
               key={u.id}
-              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2' : ''
+              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2 my-1' : ''
                 }`}
             >
               <div className="w-8 flex justify-center">
@@ -133,127 +212,93 @@ function Leaderboards() {
             </div>
           ))}
 
-          {/* Safe Zone */}
-          <div className="px-4 py-2 bg-gray-500/10 border-y border-gray-500/30">
-            <span className="text-gray-600 dark:text-gray-400 text-sm font-black tracking-widest">SAFE ZONE</span>
-          </div>
+          {/* Safe Zone - 6-15 */}
+          {safeZone.length > 0 && (
+            <>
+              <div className="px-4 py-2 bg-gray-500/10 border-y border-gray-500/30">
+                <span className="text-gray-600 dark:text-gray-400 text-sm font-black tracking-widest">SAFE ZONE (6-15)</span>
+              </div>
 
-          {leaderboardData.slice(zones.promotion, Math.max(zones.promotion, leaderboardData.length - zones.demotion)).map((u) => (
-            <div
-              key={u.id}
-              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2' : ''
-                }`}
-            >
-              <div className="w-8 flex justify-center">
-                <span className="text-gray-500 dark:text-gray-400 font-bold text-lg">{u.rank}</span>
-              </div>
-              <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center overflow-hidden border-2 border-border-main shadow-sm">
-                {u.avatar_url ? (
-                  <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xl">👤</span>
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-text-main font-black text-sm md:text-base">{u.username}{u.isCurrentUser ? ' (You)' : ''}</p>
-                <p className="text-text-alt text-xs md:text-sm font-bold">{u.xp.toLocaleString()} XP</p>
-              </div>
-            </div>
-          ))}
-
-          {zones.demotion > 0 && leaderboardData.length > zones.demotion && (
-            <div className="px-4 py-2 bg-red-500/10 border-y border-red-500/30">
-              <span className="text-red-500 dark:text-red-400 text-sm font-black tracking-widest">DEMOTION ZONE</span>
-            </div>
+              {safeZone.map((u) => (
+                <div
+                  key={u.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2 my-1' : ''
+                    }`}
+                >
+                  <div className="w-8 flex justify-center">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold text-lg">{u.rank}</span>
+                  </div>
+                  <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center overflow-hidden border-2 border-border-main shadow-sm">
+                    {u.avatar_url ? (
+                      <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl">👤</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-text-main font-black text-sm md:text-base">{u.username}{u.isCurrentUser ? ' (You)' : ''}</p>
+                    <p className="text-text-alt text-xs md:text-sm font-bold">{u.xp.toLocaleString()} XP</p>
+                  </div>
+                </div>
+              ))}
+            </>
           )}
 
-          {leaderboardData.length > 0 && leaderboardData.slice(Math.max(0, leaderboardData.length - zones.demotion)).map((u) => (
-            <div
-              key={u.id}
-              className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main last:border-b-0 transition-colors ${u.isCurrentUser ? 'bg-brand-primary/10 border-2 border-brand-primary rounded-xl mx-2' : ''
-                }`}
-            >
-              <div className="w-8 flex justify-center">
-                <span className="text-gray-500 dark:text-gray-400 font-bold text-lg">{u.rank}</span>
+          {/* Demotion Zone - 16+ */}
+          {demotionZone.length > 0 && (
+            <>
+              <div className="px-4 py-2 bg-red-500/10 border-y border-red-500/30">
+                <span className="text-red-500 dark:text-red-400 text-sm font-black tracking-widest">DEMOTION ZONE (16+)</span>
               </div>
-              <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center overflow-hidden border-2 border-border-main shadow-sm">
-                {u.avatar_url ? (
-                  <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xl">👤</span>
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-gray-900 dark:text-white font-black text-sm md:text-base">{u.username}{u.isCurrentUser ? ' (You)' : ''}</p>
-                <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-bold">{u.xp.toLocaleString()} XP</p>
-              </div>
-            </div>
-          ))}
+
+              {demotionZone.map((u) => (
+                <div
+                  key={u.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 md:px-4 md:py-3 border-b border-border-main last:border-b-0 transition-colors ${u.isCurrentUser ? 'bg-red-500/10 border-2 border-red-500 rounded-xl mx-2 my-1' : ''
+                    }`}
+                >
+                  <div className="w-8 flex justify-center">
+                    <span className="text-red-500 dark:text-red-400 font-bold text-lg">{u.rank}</span>
+                  </div>
+                  <div className="w-10 h-10 bg-bg-alt rounded-full flex items-center justify-center overflow-hidden border-2 border-border-main shadow-sm">
+                    {u.avatar_url ? (
+                      <img src={u.avatar_url} alt={u.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xl">👤</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-900 dark:text-white font-black text-sm md:text-base">{u.username}{u.isCurrentUser ? ' (You)' : ''}</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-bold">{u.xp.toLocaleString()} XP</p>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
 
-        {/* League Info */}
-        <div className="mt-6 space-y-4">
-          <div className="bg-bg-card rounded-xl p-4 border-2 border-border-main transition-colors duration-300">
-            <h3 className="text-gray-900 dark:text-white font-black mb-2 uppercase tracking-wide">Your Status</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400 font-bold">Current Rank:</span>
-                <span className="text-gray-900 dark:text-white font-black">#{currentUser?.rank || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400 font-bold">Your XP:</span>
-                <span className="text-gray-900 dark:text-white font-black">{(currentUser?.xp || 0).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400 font-bold">Status:</span>
-                <span className={`font-black uppercase tracking-wide ${currentUser && currentUser.rank <= zones.promotion ? 'text-brand-primary' :
-                  currentUser && currentUser.rank > leaderboardData.length - zones.demotion ? 'text-red-500' :
-                    'text-gray-500'
-                  }`}>
-                  {currentUser && currentUser.rank <= zones.promotion ? 'Promotion Zone' :
-                    currentUser && currentUser.rank > leaderboardData.length - zones.demotion ? 'Demotion Zone' :
-                      'Safe Zone'}
-                </span>
-              </div>
+        {/* League Rules Info */}
+        <div className="mt-6 bg-bg-card rounded-xl p-4 border-2 border-border-main">
+          <h3 className="text-text-main font-black mb-3 uppercase tracking-wide">League Rules</h3>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-brand-primary"></div>
+              <span className="text-text-alt"><span className="text-brand-primary font-bold">Top 5</span> advance to next league</span>
             </div>
-          </div>
-          <div className="text-center">
-            <p className="text-gray-500 text-sm">
-              Complete lessons to earn XP and climb the leaderboard!
-            </p>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-gray-500"></div>
+              <span className="text-text-alt"><span className="text-gray-400 font-bold">6-15</span> stay in current league</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <span className="text-text-alt"><span className="text-red-500 font-bold">16+</span> demote to previous league</span>
+            </div>
+            <div className="mt-3 p-3 bg-bg-alt rounded-lg text-text-alt text-xs">
+              <strong>Note:</strong> You need at least 1 XP or 1 completed lesson to participate in league rankings.
+            </div>
           </div>
         </div>
       </div>
-      {/* Sticky Bottom Rank Bar */}
-      {currentUser && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 lg:right-80 bg-bg-card/95 backdrop-blur-md border-t-4 border-brand-primary/20 z-40 px-6 py-4 animate-slide-up shadow-[0_-8px_30px_rgb(0,0,0,0.12)]">
-          <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-brand-primary text-white rounded-xl flex items-center justify-center font-black text-lg shadow-lg shadow-brand-primary/20">
-                #{currentUser.rank}
-              </div>
-              <div>
-                <p className="text-text-main font-black leading-none mb-1">YOU</p>
-                <p className="text-text-alt text-xs font-bold uppercase tracking-widest">{currentUser.xp.toLocaleString()} XP</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-end">
-              <p className={`font-black text-xs uppercase tracking-[0.2em] px-3 py-1 rounded-full ${currentUser.rank <= zones.promotion ? 'bg-emerald-500/10 text-emerald-500' :
-                currentUser.rank > leaderboardData.length - zones.demotion ? 'bg-red-500/10 text-red-500' :
-                  'bg-gray-500/10 text-gray-500'
-                }`}>
-                {currentUser.rank <= zones.promotion ? 'Promotion' :
-                  currentUser.rank > leaderboardData.length - zones.demotion ? 'Demotion' :
-                    'Safe'}
-              </p>
-              <p className="text-text-alt text-[10px] font-black uppercase tracking-widest mt-1">
-                {currentUser.rank <= zones.promotion ? 'Top 10 advance' : 'Keep pushing!'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -1056,6 +1056,42 @@ const generateExercises = (topic, lessonNumber, learningLang, nativeLang) => {
   return exercises
 }
 
+// Helper: Generate Practice Lesson (Targeted, Listening, etc.)
+const generatePracticeLesson = (nativeLanguage, learningLanguage, type) => {
+  const allUnits = getAllUnits(nativeLanguage, learningLanguage)
+  let allContent = []
+
+  // Flatten content
+  allUnits.forEach(unit => {
+    unit.lessons.forEach(lesson => {
+      // Extract vocab from exercises if possible, or just re-use exercises
+      // For simplicity, we'll pool all exercises
+      allContent.push(...lesson.exercises)
+    })
+  })
+
+  // Filter based on type if needed
+  let pool = allContent
+  if (type === 'listening') {
+    // In future, filter for audio exercises only. For now, use all.
+  }
+
+  // Shuffle and pick 10
+  const practiceExercises = pool
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 10)
+    .map((ex, i) => ({
+      ...ex,
+      id: `practice-${type}-${i}` // Ensure unique IDs
+    }))
+
+  return {
+    id: type,
+    title: type === 'mistakes' ? 'Mistakes Review' : 'Targeted Practice',
+    exercises: practiceExercises
+  }
+}
+
 // Export lesson data for all language pairs
 export const sectionsData = {
   'english-amharic': generateSectionsAndUnits('english-amharic'),
@@ -1096,6 +1132,10 @@ export const getUnit = (nativeLanguage, learningLanguage, unitId) => {
 
 // Helper function to get a specific lesson
 export const getLesson = (nativeLanguage, learningLanguage, unitId, lessonId) => {
+  if (unitId === 'practice') {
+    return generatePracticeLesson(nativeLanguage, learningLanguage, lessonId)
+  }
+
   const unit = getUnit(nativeLanguage, learningLanguage, unitId)
   if (!unit) return null
   return unit.lessons.find(l => l.id === lessonId)

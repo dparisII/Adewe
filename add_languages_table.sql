@@ -28,9 +28,11 @@ CREATE POLICY "Admins can manage languages" ON languages FOR ALL USING (is_admin
 INSERT INTO languages (code, name, native_name, flag, script, is_active, is_target, sort_order)
 VALUES
   ('am', 'Amharic', 'አማርኛ', '🇪🇹', 'geez', true, true, 1),
-  ('ti', 'Tigrinya', 'ትግርኛ', '🇪🇷', 'geez', true, true, 2),
+  -- ('ti', 'Tigrinya', 'ትግርኛ', '🇪🇷', 'geez', true, true, 2),
+  ('ti', 'Tigrinya', 'ትግርኛ', '🇪🇹', 'geez', true, true, 2),
   ('om', 'Oromo', 'Afaan Oromoo', '🇪🇹', 'latin', true, true, 3),
-  ('so', 'Somali', 'Soomaali', '🇸🇴', 'latin', true, true, 4),
+  -- ('so', 'Somali', 'Soomaali', '🇸🇴', 'latin', true, true, 4),
+  ('so', 'Somali', 'Soomaali', '🇪🇹', 'latin', true, true, 4),
   ('en', 'English', 'English', '🇬🇧', 'latin', true, true, 5),
   ('gez', 'Ge''ez', 'ግዕዝ', '🇪🇹', 'geez', true, true, 6)
 ON CONFLICT (code) DO NOTHING;
