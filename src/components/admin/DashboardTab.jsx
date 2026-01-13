@@ -3,7 +3,7 @@ import {
   Users, BookOpen, TrendingUp, Activity, Flame, Globe,
   Heart, Gem, Calendar, Clock, Award, Target, Zap,
   ArrowUpRight, ArrowDownRight, MoreHorizontal, Trash2, Filter, RefreshCw,
-  ArrowRight
+  ArrowRight, AlertTriangle
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { getFlag } from '../../data/languageFlags'
