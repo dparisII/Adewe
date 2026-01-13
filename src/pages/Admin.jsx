@@ -148,6 +148,7 @@ function Admin() {
       fetchData()
     } catch (error) {
       console.error('Error deleting user:', error)
+      alert('Failed to delete user: ' + error.message)
     }
   }
 

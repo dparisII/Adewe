@@ -163,10 +163,9 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
   const [logFilter, setLogFilter] = useState('all') // all, user, guest
   const [daysFilter, setDaysFilter] = useState('7d') // 24h, 7d, 30d, all
   const [isResetting, setIsResetting] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const handleResetLogs = async () => {
-    if (!window.confirm('Are you sure you want to clear all visitor logs? This cannot be undone.')) return
-
     setIsResetting(true)
     try {
       // Try RPC first, fallback to delete
@@ -182,6 +181,7 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
       if (onRefresh) onRefresh()
       setShowVisitorDetails(false)
       setShowPageViewDetails(false)
+      setShowResetConfirm(false)
     } catch (err) {
       console.error('Error resetting logs:', err)
     } finally {
@@ -323,7 +323,7 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
           </select>
 
           <button
-            onClick={handleResetLogs}
+            onClick={() => setShowResetConfirm(true)}
             disabled={isResetting}
             className="flex items-center gap-1.5 px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-black uppercase tracking-wide transition-all disabled:opacity-50"
           >
@@ -480,6 +480,47 @@ function DashboardTab({ stats, users, loading, onRefresh, onTabChange }) {
           <h4 className="font-black text-text-main uppercase tracking-widest text-sm">Visitor Device Log</h4>
         </div>
         <VisitTable visits={filteredVisits} />
+      </Modal>
+
+      {/* Reset Logs Confirmation Modal */}
+      <Modal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        title="Clear Traffic Logs"
+        maxWidth="max-w-md"
+      >
+        <div className="p-2 space-y-4">
+          <div className="bg-red-500/10 p-4 rounded-2xl border-2 border-red-500/20 flex items-start gap-3">
+            <AlertTriangle className="text-red-500 shrink-0" size={24} />
+            <div>
+              <p className="text-red-500 font-black uppercase tracking-tight text-sm">Permanent Action</p>
+              <p className="text-red-400 text-xs font-bold leading-relaxed">
+                This will permanently delete all visitor logs and page view history. This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <p className="text-text-alt text-sm font-medium px-1">
+            Are you sure you want to proceed with clearing the analytics data?
+          </p>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => setShowResetConfirm(false)}
+              className="flex-1 duo-btn duo-btn-white py-3 text-sm"
+            >
+              CANCEL
+            </button>
+            <button
+              onClick={handleResetLogs}
+              disabled={isResetting}
+              className="flex-1 py-3 bg-red-500 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-red-600 shadow-[0_4px_0_0_#b91c1c] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isResetting && <RefreshCw size={16} className="animate-spin" />}
+              CLEAR ALL
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Layer 2: Platform Stats - Clickable */}
